@@ -36,3 +36,9 @@ pnpm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+.local-backups/
+.ruff_cache/
+coverage.xml
+schema.yml
+*.egg-info/

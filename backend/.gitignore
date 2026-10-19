@@ -1,0 +1,87 @@
+
+# ==========================================
+# Environment variables and secrets
+# ==========================================
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.example.*
+*.pem
+*.key
+secrets.json
+
+# ==========================================
+# Python / Django backend
+# ==========================================
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python package/build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# Django generated files
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# ==========================================
+# Node.js / Next.js frontend
+# ==========================================
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# Editors and operating systems
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==========================================
+# Temporary files and logs
+# ==========================================
+*.log
+logs/
+tmp/
+temp/

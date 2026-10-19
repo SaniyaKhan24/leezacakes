@@ -1,0 +1,17 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".local-backups"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "DJ"]
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+testpaths = ["tests", "apps"]
+addopts = "--strict-markers --cov=apps --cov=core --cov=config --cov-report=term-missing --cov-report=xml --cov-fail-under=85"
+[tool.coverage.run]
+branch = true
+omit = ["*/migrations/*"]
+[tool.coverage.report]
+skip_empty = true
+[tool.bandit]
+exclude_dirs = [".venv", ".local-backups", "tests"]
