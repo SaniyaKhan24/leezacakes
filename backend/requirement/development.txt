@@ -10,7 +10,7 @@ pytest-cov>=6.0,<8.0
 coverage[toml]>=7.6,<8.0
 
 # Static security analysis
-bandit>=1.8,<2.0
+bandit>=1.9.4,<2.0
 
 # Dependency vulnerability auditing
 pip-audit>=2.7,<3.0
