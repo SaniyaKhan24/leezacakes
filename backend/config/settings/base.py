@@ -101,7 +101,7 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = csv("CORS_ALLOWED_ORIGINS")
-CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", default=False, cast=bool)
 CSRF_TRUSTED_ORIGINS = csv("CSRF_TRUSTED_ORIGINS")
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -115,7 +115,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "apps.common.openapi.AppTagAutoSchema",
     "EXCEPTION_HANDLER": "apps.common.exceptions.exception_handler",
     "DEFAULT_PAGINATION_CLASS": "apps.common.pagination.StandardPagination",
     "PAGE_SIZE": 20,
@@ -155,6 +155,35 @@ PAYMENT_EVIDENCE_MAX_SIZE = config("PAYMENT_EVIDENCE_MAX_SIZE", default=5 * 1024
 SPECTACULAR_SETTINGS = {
     "TITLE": "Leeza Cakes API",
     "VERSION": "1.0.0",
+    "DESCRIPTION": (
+        "Leeza Cakes backend API for accounts, catalog, customization, cart, orders, "
+        "payments, notifications, and product search."
+    ),
+    "TAGS": [
+        {"name": "Common", "description": "Health and readiness endpoints."},
+        {
+            "name": "Accounts",
+            "description": "Registration, authentication, profiles, and addresses.",
+        },
+        {"name": "Catalog", "description": "Public catalog browsing and staff catalog management."},
+        {"name": "Customization", "description": "Product customization options and validation."},
+        {"name": "Cart", "description": "Guest and authenticated cart operations."},
+        {
+            "name": "Orders",
+            "description": (
+                "Pickup checkout, customer orders, and staff order lifecycle management."
+            ),
+        },
+        {
+            "name": "Payments",
+            "description": "UPI payment evidence submission and staff verification.",
+        },
+        {
+            "name": "Notifications",
+            "description": "Transactional notification preferences and delivery events.",
+        },
+        {"name": "Search", "description": "Unified public product search and filtering."},
+    ],
     "SERVE_INCLUDE_SCHEMA": False,
     "SERVE_AUTHENTICATION": [],
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],

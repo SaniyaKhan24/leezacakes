@@ -1,0 +1,8 @@
+"use client";
+import Link from "next/link";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { SiteHeader } from "@/components/site-header";
+import { Button } from "@/components/commerce-ui";
+import { useAuth } from "@/components/providers";
+export default function LoginPage() { const router = useRouter(); const { login } = useAuth(); const submitting = useRef(false); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(false); const submit = async (event: React.FormEvent) => { event.preventDefault(); if (submitting.current) return; submitting.current = true; setLoading(true); setError(""); try { await login(email, password); router.push("/account"); } catch (err) { setError(err instanceof Error ? err.message : "Unable to sign in."); } finally { submitting.current = false; setLoading(false); } }; return <><SiteHeader /><main className="form-page"><form className="auth-card" onSubmit={submit}><p className="eyebrow">Welcome back</p><h1>Sign in.</h1><label>Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label><label>Password<input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<Button type="submit" loading={loading}>Sign in</Button><p className="form-foot"><Link href="/auth/reset">Forgot your password?</Link></p><p className="form-foot">New here? <Link href="/auth/register">Create an account</Link></p></form></main></>; }

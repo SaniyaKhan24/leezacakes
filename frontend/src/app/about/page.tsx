@@ -1,0 +1,3 @@
+import { SiteHeader } from "@/components/site-header";
+import { PageIntro } from "@/components/commerce-ui";
+export default function AboutPage() { return <><SiteHeader /><main className="store-main shell story-page"><PageIntro eyebrow="Our story" title="A little sweetness, made with feeling." copy="Leeza Cakes is a made-to-order bakery for the moments that deserve something thoughtful." /><div className="story-columns"><p>Every cake begins with a conversation: a birthday, a milestone, a quiet thank-you, or a celebration still being imagined.</p><p>Our catalogue and customization options are managed by the bakery, so what you see online stays close to what can actually be made.</p></div></main></>; }

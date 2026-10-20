@@ -12,6 +12,7 @@ from rest_framework.exceptions import ValidationError
 from apps.accounts.models import User
 from apps.orders.models import Order
 from apps.payments.models import Payment
+from apps.payments.serializers import EvidenceUploadSerializer, ReviewSerializer
 from apps.payments.services import review_submission, submit_evidence, verify_payment
 
 
@@ -70,3 +71,26 @@ def test_storage_failure_returns_validation_error_without_payment_mutation(order
         submit_evidence(payment, order.user, image_upload())
     payment.refresh_from_db()
     assert payment.status == Payment.AWAITING
+
+
+def test_evidence_serializer_rejects_non_image_upload():
+    upload = SimpleUploadedFile("receipt.txt", b"not an image", content_type="text/plain")
+    serializer = EvidenceUploadSerializer(data={"evidence": upload})
+    assert not serializer.is_valid()
+    assert "evidence" in serializer.errors
+
+
+def test_evidence_and_review_serializers_reject_unsafe_inputs(settings):
+    settings.PAYMENT_EVIDENCE_MAX_SIZE = 4
+    oversized = SimpleUploadedFile("receipt.png", b"12345", content_type="image/png")
+    evidence = EvidenceUploadSerializer(data={"evidence": oversized})
+    assert not evidence.is_valid()
+
+    gif_stream = BytesIO()
+    Image.new("RGB", (2, 2), "white").save(gif_stream, format="GIF")
+    gif = SimpleUploadedFile("receipt.gif", gif_stream.getvalue(), content_type="image/gif")
+    evidence = EvidenceUploadSerializer(data={"evidence": gif})
+    assert not evidence.is_valid()
+
+    review = ReviewSerializer(data={"decision": "reject"})
+    assert not review.is_valid()

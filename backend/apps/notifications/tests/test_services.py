@@ -45,3 +45,11 @@ def test_notification_task_dispatches(db, settings):
         event_key="order_created", deduplication_key="task:1"
     )
     deliver_notification(notification.pk)
+
+
+def test_configured_provider_marks_delivery_sent(db, settings):
+    settings.EMAIL_PROVIDER_ENABLED = True
+    user = User.objects.create_user(email="provider@example.com")
+    notification = emit_event("order_created", user=user, deduplication_key="provider:1")
+    dispatch_notification(notification.pk)
+    assert notification.attempts.get(channel="email").status == DeliveryAttempt.SENT

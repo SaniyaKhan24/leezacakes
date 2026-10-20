@@ -1,0 +1,3 @@
+import { SiteHeader } from "@/components/site-header";
+import { EmptyState, PageIntro } from "@/components/commerce-ui";
+export default function ContactPage() { return <><SiteHeader /><main className="store-main shell"><PageIntro eyebrow="Let’s talk cake" title="Tell us what you’re celebrating." copy="Contact details are being connected to the bakery workspace. In the meantime, browse the catalogue and save your favourites." /><EmptyState title="Contact channel not configured yet." copy="No email address, phone number, or social handle is currently exposed by the backend, so we have left those details out rather than inventing them." href="/shop" label="Browse the collection" /></main></>; }

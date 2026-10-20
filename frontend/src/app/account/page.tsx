@@ -1,0 +1,38 @@
+"use client";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { SiteHeader } from "@/components/site-header";
+import { Button, EmptyState } from "@/components/commerce-ui";
+import { useAuth } from "@/components/providers";
+import { api, type Address, type NotificationPreferences, type Order } from "@/lib/api";
+
+const initialAddress = { label: "Home", recipient_name: "", phone_number: "", address_line_1: "", address_line_2: "", locality: "", city: "", state: "", postal_code: "", country_code: "IN" };
+
+export default function AccountPage() {
+  const { user, loading: authLoading, logout } = useAuth();
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
+  const [addressForm, setAddressForm] = useState(initialAddress);
+  const [security, setSecurity] = useState({ current_password: "", new_password: "", new_password_confirm: "" });
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => { if (!user) return; api.addresses().then(setAddresses).catch(() => {}); api.orders().then(setOrders).catch(() => {}); api.notificationPreferences().then(setPreferences).catch(() => {}); }, [user]);
+  const saveAddress = async (event: React.FormEvent) => { event.preventDefault(); try { const address = await api.createAddress(addressForm); setAddresses((current) => [...current, address]); setAddressForm(initialAddress); setShowAddressForm(false); } catch { setMessage("We could not save that address."); } };
+  const removeAddress = async (id: string) => { try { await api.deleteAddress(id); setAddresses((current) => current.filter((address) => address.id !== id)); } catch { setMessage("We could not remove that address."); } };
+  const makeDefault = async (id: string) => { try { const selected = await api.setDefaultAddress(id); setAddresses((current) => current.map((address) => ({ ...address, is_default: address.id === selected.id }))); } catch { setMessage("We could not change the default address."); } };
+  const changePassword = async (event: React.FormEvent) => { event.preventDefault(); try { await api.changePassword(security); setSecurity({ current_password: "", new_password: "", new_password_confirm: "" }); setMessage("Your password has been updated."); } catch { setMessage("We could not update your password. Check the fields and try again."); } };
+  const savePreferences = async (event: React.FormEvent) => { event.preventDefault(); if (!preferences) return; try { setPreferences(await api.updateNotificationPreferences(preferences)); setMessage("Notification preferences saved."); } catch { setMessage("We could not save notification preferences."); } };
+  if (authLoading) return <><SiteHeader /><div className="loading-copy">Loading your account…</div></>;
+  if (!user) return <><SiteHeader /><main className="store-main shell"><EmptyState title="Sign in to see your account." copy="Your saved addresses, order history, and checkout details live here." href="/auth/login" label="Sign in" /></main></>;
+  return <><SiteHeader /><main className="store-main shell account-page">
+    <div className="account-head"><div><p className="eyebrow">Your account</p><h1>Hello, {user.first_name}.</h1><p>{user.email}</p></div><Button onClick={() => logout()}>Sign out</Button></div>
+    <section className="account-section"><div className="section-title"><h2>Order history</h2><Link href="/shop">Shop cakes →</Link></div>{orders.length ? <div className="order-list">{orders.map((order) => <Link className="order-row" href={`/orders/${order.id}`} key={order.id}><span>{order.order_number}<small>{new Date(order.created_at).toLocaleDateString()}</small></span><span>{order.status}<small>₹{Number(order.grand_total).toLocaleString("en-IN")}</small></span></Link>)}</div> : <p className="muted">Your orders will appear here after checkout.</p>}</section>
+    <section className="account-section"><div className="section-title"><h2>Saved addresses</h2><Button onClick={() => setShowAddressForm((current) => !current)}>{showAddressForm ? "Close" : "Add address"}</Button></div>
+      {showAddressForm && <form className="address-form" onSubmit={saveAddress}><div className="form-two"><label>Label<input value={addressForm.label} onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })} /></label><label>Recipient<input required value={addressForm.recipient_name} onChange={(e) => setAddressForm({ ...addressForm, recipient_name: e.target.value })} /></label></div><label>Phone<input required value={addressForm.phone_number} onChange={(e) => setAddressForm({ ...addressForm, phone_number: e.target.value })} /></label><label>Address line 1<input required value={addressForm.address_line_1} onChange={(e) => setAddressForm({ ...addressForm, address_line_1: e.target.value })} /></label><div className="form-two"><label>Locality<input required value={addressForm.locality} onChange={(e) => setAddressForm({ ...addressForm, locality: e.target.value })} /></label><label>City<input required value={addressForm.city} onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })} /></label></div><div className="form-two"><label>State<input required value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })} /></label><label>Postal code<input required value={addressForm.postal_code} onChange={(e) => setAddressForm({ ...addressForm, postal_code: e.target.value })} /></label></div><Button type="submit">Save address</Button></form>}
+      {addresses.length ? addresses.map((address) => <div className="address-row" key={address.id}><strong>{address.label}</strong><span>{address.recipient_name}, {address.address_line_1}, {address.city}, {address.postal_code}</span>{address.is_default && <small>Default</small>}<div className="inline-actions">{!address.is_default && <button className="text-button" onClick={() => makeDefault(address.id)}>Make default</button>}<button className="text-button" onClick={() => removeAddress(address.id)}>Remove</button></div></div>) : <p className="muted">No saved addresses yet.</p>}
+    </section>
+    {preferences && <section className="account-section"><div className="section-title"><h2>Notifications</h2></div><form onSubmit={savePreferences} className="preference-form">{(["marketing_email_enabled", "marketing_sms_enabled", "marketing_whatsapp_enabled"] as const).map((key) => <label key={key}><input type="checkbox" checked={preferences[key]} onChange={(event) => setPreferences({ ...preferences, [key]: event.target.checked })} /> {key.replace("marketing_", "").replace("_enabled", "")} updates</label>)}<Button type="submit">Save preferences</Button></form></section>}
+    <section className="account-section"><div className="section-title"><h2>Security</h2></div><form onSubmit={changePassword} className="address-form"><label>Current password<input required type="password" value={security.current_password} onChange={(e) => setSecurity({ ...security, current_password: e.target.value })} /></label><div className="form-two"><label>New password<input required type="password" value={security.new_password} onChange={(e) => setSecurity({ ...security, new_password: e.target.value })} /></label><label>Confirm new password<input required type="password" value={security.new_password_confirm} onChange={(e) => setSecurity({ ...security, new_password_confirm: e.target.value })} /></label></div><Button type="submit">Change password</Button>{message && <p className="muted" role="status">{message}</p>}</form></section>
+  </main></>;
+}
