@@ -1,3 +1,5 @@
+import os
+
 from django.core.exceptions import ImproperlyConfigured
 
 from config.environment import BASE_DIR, VERIFY, config, csv, required
@@ -13,6 +15,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "drf_spectacular",
     *[
@@ -30,8 +33,10 @@ INSTALLED_APPS = [
         )
     ],
 ]
+AUTH_USER_MODEL = "accounts.User"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "apps.common.middleware.CorrelationIdMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -74,7 +79,7 @@ if DATABASES["default"]["OPTIONS"]["sslmode"] not in {"require", "verify-ca", "v
     raise ImproperlyConfigured("DB_SSLMODE must preserve TLS: require, verify-ca or verify-full.")
 if not 1 <= DATABASES["default"]["PORT"] <= 65535:
     raise ImproperlyConfigured("DB_PORT must be between 1 and 65535.")
-if VERIFY:
+if VERIFY and os.environ.get("DJANGO_SETTINGS_MODULE") == "config.settings.production_check":
     DATABASES = {"default": {"ENGINE": "django.db.backends.dummy"}}
     DATABASE_ROUTERS = ["config.verification.NoDatabaseRouter"]
 AUTH_PASSWORD_VALIDATORS = [
@@ -104,11 +109,15 @@ CSRF_COOKIE_SAMESITE = "Lax"
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "EXCEPTION_HANDLER": "apps.common.exceptions.exception_handler",
+    "DEFAULT_PAGINATION_CLASS": "apps.common.pagination.StandardPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
@@ -116,7 +125,33 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {"anon": "60/min", "user": "120/min"},
 }
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
+    {
+        "register": "5/hour",
+        "login": "10/min",
+        "refresh": "20/min",
+        "password_change": "5/hour",
+        "password_reset": "5/hour",
+        "password_reset_confirm": "10/hour",
+        "verification_request": "5/hour",
+        "verification_confirm": "10/hour",
+    }
+)
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": __import__("datetime").timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": __import__("datetime").timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "ALGORITHM": "HS256",
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 API_DOCS_ENABLED = config("API_DOCS_ENABLED", default=False, cast=bool)
+WHATSAPP_PROVIDER_ENABLED = config("WHATSAPP_PROVIDER_ENABLED", default=False, cast=bool)
+SMS_PROVIDER_ENABLED = config("SMS_PROVIDER_ENABLED", default=False, cast=bool)
+EMAIL_PROVIDER_ENABLED = config("EMAIL_PROVIDER_ENABLED", default=False, cast=bool)
+PAYMENT_EVIDENCE_STORAGE_ROOT = config("PAYMENT_EVIDENCE_STORAGE_ROOT", default="")
+PAYMENT_EVIDENCE_MAX_SIZE = config("PAYMENT_EVIDENCE_MAX_SIZE", default=5 * 1024 * 1024, cast=int)
 SPECTACULAR_SETTINGS = {
     "TITLE": "Leeza Cakes API",
     "VERSION": "1.0.0",
