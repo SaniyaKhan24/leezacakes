@@ -74,3 +74,77 @@ def test_required_and_wrong_choice_rejected(configured_product):
         format="json",
     )
     assert invalid.status_code == 400
+
+
+def test_staff_customization_management(configured_product):
+    product, _, _, _, _ = configured_product
+    from apps.accounts.models import User
+
+    staff = User.objects.create_user(email="custom-staff@example.com", is_staff=True)
+    client = APIClient()
+    client.force_authenticate(user=staff)
+    option = client.post(
+        "/api/v1/customization/admin/options/",
+        {"name": "Colour", "slug": "colour", "input_type": "single_choice"},
+        format="json",
+    )
+    assert option.status_code == 201
+    choice = client.post(
+        f"/api/v1/customization/admin/options/{option.data['id']}/choices/",
+        {"name": "Pink", "slug": "pink"},
+        format="json",
+    )
+    assert choice.status_code == 201
+    config = client.post(
+        f"/api/v1/customization/admin/products/{product.id}/options/",
+        {"option": option.data["id"], "is_required": False},
+        format="json",
+    )
+    assert config.status_code == 201
+
+
+def test_customization_choices_and_admin_updates(configured_product):
+    product, option, choice, config, product_choice = configured_product
+    client = APIClient()
+    assert (
+        client.get(
+            f"/api/v1/customization/products/{product.slug}/options/{option.id}/choices/"
+        ).status_code
+        == 200
+    )
+    staff = __import__("apps.accounts.models", fromlist=["User"]).User.objects.create_user(
+        email="choice-staff@example.com", is_staff=True
+    )
+    client.force_authenticate(user=staff)
+    assert (
+        client.patch(
+            f"/api/v1/customization/admin/options/{option.id}/",
+            {"description": "Updated"},
+            format="json",
+        ).status_code
+        == 200
+    )
+    assert (
+        client.patch(
+            f"/api/v1/customization/admin/options/{option.id}/choices/{choice.id}/",
+            {"name": "Vanilla updated"},
+            format="json",
+        ).status_code
+        == 200
+    )
+    assert (
+        client.patch(
+            f"/api/v1/customization/admin/products/{product.id}/options/{config.id}/",
+            {"is_required": False},
+            format="json",
+        ).status_code
+        == 200
+    )
+    assert (
+        client.patch(
+            f"/api/v1/customization/admin/products/{product.id}/options/{config.id}/choices/{product_choice.id}/",
+            {"price_adjustment": "50.00"},
+            format="json",
+        ).status_code
+        == 200
+    )

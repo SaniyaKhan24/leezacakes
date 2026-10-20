@@ -2,6 +2,9 @@ import pytest
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.cart.permissions import CartAccessPermission
+from apps.cart.selectors import owned_cart
+from apps.cart.services.cart_service import get_or_create_cart
 from apps.catalog.models import Category, Product, ProductVariant
 
 
@@ -81,3 +84,37 @@ def test_price_change_requires_confirmation(product):
     result = client.post("/api/v1/cart/validate/", {}, format="json")
     assert result.data["price_confirmation_required"] is True
     assert client.post("/api/v1/cart/confirm-prices/", {}, format="json").status_code == 200
+
+
+def test_cart_item_update_remove_clear_and_validate(product):
+    client = APIClient()
+    added = client.post(
+        "/api/v1/cart/items/", {"product_id": product.id, "quantity": 1}, format="json"
+    )
+    item_id = added.data["items"][0]["id"]
+    assert client.get("/api/v1/cart/").status_code == 200
+    assert (
+        client.patch(f"/api/v1/cart/items/{item_id}/", {"quantity": 2}, format="json").status_code
+        == 200
+    )
+    assert client.post("/api/v1/cart/checkout/validate/", {}, format="json").status_code == 200
+    assert client.delete(f"/api/v1/cart/items/{item_id}/").status_code == 204
+    assert client.delete("/api/v1/cart/items/").status_code == 204
+
+
+def test_cart_selector_returns_only_current_cart(product):
+    user = User.objects.create_user(email="selector@example.com")
+    client = APIClient()
+    client.force_authenticate(user=user)
+    request = type("Request", (), {"user": user, "session": client.session})()
+    cart = get_or_create_cart(request)
+    assert owned_cart(request) == cart
+    guest_client = APIClient()
+    guest_request = type(
+        "Request",
+        (),
+        {"user": type("Anon", (), {"is_authenticated": False})(), "session": guest_client.session},
+    )()
+    guest_cart = get_or_create_cart(guest_request)
+    assert owned_cart(guest_request) == guest_cart
+    assert CartAccessPermission().has_permission(guest_request, None)

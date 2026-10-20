@@ -1,6 +1,7 @@
 from decimal import Decimal
 from uuid import uuid4
 
+from django.core.exceptions import SuspiciousOperation
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -38,7 +39,7 @@ def submit_evidence(payment, user, evidence):
     try:
         submission.evidence_file.save(f"{uuid4().hex}.upload", evidence, save=False)
         submission.save()
-    except Exception as exc:
+    except (OSError, ValueError, SuspiciousOperation) as exc:
         raise ValidationError({"evidence": "Private evidence storage is unavailable."}) from exc
     payment.status = Payment.PENDING
     payment.save(update_fields=("status", "updated_at"))

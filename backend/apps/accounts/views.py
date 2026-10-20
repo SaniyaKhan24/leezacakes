@@ -84,10 +84,11 @@ class LogoutView(APIView):
         token = request.data.get("refresh")
         if token:
             try:
+                from rest_framework_simplejwt.exceptions import TokenError
                 from rest_framework_simplejwt.tokens import RefreshToken
 
                 RefreshToken(token).blacklist()
-            except Exception:  # noqa: BLE001
+            except (TokenError, ValueError):
                 pass
         django_logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)

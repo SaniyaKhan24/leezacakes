@@ -130,9 +130,9 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
         "register": "5/hour",
         "login": "10/min",
         "refresh": "20/min",
-        "password_change": "5/hour",
-        "password_reset": "5/hour",
-        "password_reset_confirm": "10/hour",
+        "password_change": "5/hour",  # nosec B105 - throttle rate, not a credential
+        "password_reset": "5/hour",  # nosec B105 - throttle rate, not a credential
+        "password_reset_confirm": "10/hour",  # nosec B105 - throttle rate, not a credential
         "verification_request": "5/hour",
         "verification_confirm": "10/hour",
     }
@@ -160,6 +160,27 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "SWAGGER_UI_DIST": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.31.0",
     "SWAGGER_UI_FAVICON_HREF": None,
+    "ENUM_NAME_OVERRIDES": {
+        "ToStatusEnum": (
+            ("pending_payment_verification", "Pending payment verification"),
+            ("confirmed", "Confirmed"),
+            ("preparing", "Preparing"),
+            ("ready_for_pickup", "Ready for pickup"),
+            ("completed", "Completed"),
+            ("cancelled", "Cancelled"),
+        ),
+        "StatusEnum": (
+            ("awaiting_payment", "Awaiting payment"),
+            ("pending_verification", "Pending verification"),
+            ("verified", "Verified"),
+            ("rejected", "Rejected"),
+        ),
+        "StatusFa9Enum": (
+            ("pending_review", "Pending review"),
+            ("accepted", "Accepted"),
+            ("rejected", "Rejected"),
+        ),
+    },
 }
 LOGGING = {
     "version": 1,

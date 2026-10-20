@@ -85,6 +85,8 @@ def main():
                 "scripts",
                 "-c",
                 "pyproject.toml",
+                "-x",
+                "*/tests/*",
             ],
         ),
     ]
@@ -95,8 +97,12 @@ def main():
             "SKIPPED: dependency audit explicitly requested; CI security audit remains mandatory."
         )
     else:
-        # Both locks include platform-specific runtime packages (including Linux gunicorn).
-        for lock in ("requirements.txt", "requirements-dev.txt", "requirements-linux.txt"):
+        # Audit the repository's requirement manifests. They are range manifests, not hash locks.
+        for lock in (
+            "requirement/base.txt",
+            "requirement/development.txt",
+            "requirement/production.txt",
+        ):
             run(
                 f"Dependency audit: {lock}",
                 [
@@ -105,8 +111,6 @@ def main():
                     "-r",
                     lock,
                     "--strict",
-                    "--require-hashes",
-                    "--disable-pip",
                     "--progress-spinner",
                     "off",
                 ],

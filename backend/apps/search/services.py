@@ -1,4 +1,5 @@
 from django.db.models import Case, Count, F, Min, Q, Value, When
+from django.db.models.functions import Coalesce
 
 from apps.catalog.models import Product
 
@@ -8,8 +9,8 @@ def search_products(filters):
     queryset = (
         Product.objects.filter(status=Product.PUBLISHED, category__is_active=True)
         .annotate(
-            eligible_price=Case(
-                When(variants__is_active=True, then=Min("variants__price")), default=F("base_price")
+            eligible_price=Coalesce(
+                Min("variants__price", filter=Q(variants__is_active=True)), F("base_price")
             )
         )
         .select_related("category")

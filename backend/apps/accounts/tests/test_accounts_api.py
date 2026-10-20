@@ -8,6 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APIClient
 
 from apps.accounts.models import AccountVerificationToken, Address
+from apps.accounts.selectors import owned_address, user_addresses
 
 User = get_user_model()
 
@@ -105,6 +106,14 @@ def test_login_returns_jwt_and_rejects_unverified(api_client, user):
         ).status_code
         == 401
     )
+
+
+def test_logout_ignores_invalid_refresh_token_without_server_error(api_client, user):
+    auth(api_client, user)
+    response = api_client.post(
+        "/api/v1/accounts/logout/", {"refresh": "malformed-token"}, format="json"
+    )
+    assert response.status_code == 204
 
 
 def test_profile_requires_authentication_and_has_explicit_fields(api_client, user):
@@ -207,3 +216,18 @@ def test_addresses_are_owned_and_single_default(api_client, user, db):
     auth(api_client, user)
     assert api_client.delete(f"/api/v1/accounts/addresses/{address_id}/").status_code == 204
     assert Address.objects.filter(user=user).count() == 1
+
+
+def test_user_manager_normalizes_email_and_rejects_invalid_superuser(db):
+    user = User.objects.create_user("  Mixed@Example.com ", password="Strong-password-123!")
+    assert user.email == "mixed@example.com"
+    with pytest.raises(ValueError):
+        User.objects.create_superuser(
+            "bad@example.com", password="Strong-password-123!", is_staff=False
+        )
+
+
+def test_address_selectors_are_user_scoped(user, db):
+    address = Address.objects.create(user=user, **valid_address())
+    assert list(user_addresses(user)) == [address]
+    assert owned_address(user, address.id) == address

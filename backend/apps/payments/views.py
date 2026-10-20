@@ -76,7 +76,11 @@ class StaffPaymentListView(APIView):
 
     @extend_schema(responses=PaymentSerializer(many=True))
     def get(self, request):
-        queryset = Payment.objects.select_related("order", "user").prefetch_related("submissions")
+        queryset = (
+            Payment.objects.select_related("order", "user")
+            .prefetch_related("submissions")
+            .order_by("-created_at", "id")
+        )
         if request.query_params.get("status"):
             queryset = queryset.filter(status=request.query_params["status"])
         paginator = StandardPagination()

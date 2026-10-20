@@ -5,10 +5,10 @@ from rest_framework.exceptions import ValidationError
 from ..models import Order, OrderStatusHistory
 
 ALLOWED = {
-    Order.PENDING_PAYMENT: {Order.CONFIRMED},
-    Order.CONFIRMED: {Order.PREPARING},
-    Order.PREPARING: {Order.READY},
-    Order.READY: {Order.COMPLETED},
+    Order.PENDING_PAYMENT: {Order.CONFIRMED, Order.CANCELLED},
+    Order.CONFIRMED: {Order.PREPARING, Order.CANCELLED},
+    Order.PREPARING: {Order.READY, Order.CANCELLED},
+    Order.READY: {Order.COMPLETED, Order.CANCELLED},
 }
 
 
@@ -26,6 +26,8 @@ def transition_order(order, to_status, actor, reason=""):
         order.confirmed_at = now
     if to_status == Order.COMPLETED:
         order.completed_at = now
+    if to_status == Order.CANCELLED:
+        order.cancelled_at = now
     order.save(update_fields=("status", "confirmed_at", "completed_at", "updated_at"))
     OrderStatusHistory.objects.create(
         order=order, from_status=old, to_status=to_status, changed_by=actor, reason=reason

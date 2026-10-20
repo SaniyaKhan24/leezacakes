@@ -69,9 +69,13 @@ def confirm_email(uid, raw_token):
             )
         )
     except (ValueError, TypeError, AccountVerificationToken.DoesNotExist):
-        raise ValidationError({"token": "Invalid or expired verification token."}) from None
+        raise ValidationError(  # nosec B105 - validation text, not a credential
+            {"token": "Invalid or expired verification token."}  # nosec B105
+        ) from None
     if record.expires_at <= timezone.now():
-        raise ValidationError({"token": "Invalid or expired verification token."})
+        raise ValidationError(  # nosec B105 - validation text, not a credential
+            {"token": "Invalid or expired verification token."}  # nosec B105
+        )
     record.used_at = timezone.now()
     record.save(update_fields=("used_at",))
     user = record.user
@@ -83,7 +87,9 @@ def confirm_email(uid, raw_token):
 @transaction.atomic
 def change_password(user, current_password, new_password):
     if not user.check_password(current_password):
-        raise ValidationError({"current_password": "Current password is incorrect."})
+        raise ValidationError(  # nosec B105 - validation text, not a credential
+            {"current_password": "Current password is incorrect."}  # nosec B105
+        )
     user.set_password(new_password)
     user.save(update_fields=("password",))
     _notify("Your Leeza Cakes password changed", "Your password was changed.", user.email)
@@ -107,9 +113,13 @@ def confirm_password_reset(uid, token, new_password):
         user_id = urlsafe_base64_decode(uid).decode()
         user = User.objects.get(pk=user_id, is_active=True)
     except (ValueError, TypeError, User.DoesNotExist):
-        raise ValidationError({"token": "Invalid or expired reset token."}) from None
+        raise ValidationError(  # nosec B105 - validation text, not a credential
+            {"token": "Invalid or expired reset token."}  # nosec B105
+        ) from None
     if not default_token_generator.check_token(user, token):
-        raise ValidationError({"token": "Invalid or expired reset token."})
+        raise ValidationError(  # nosec B105 - validation text, not a credential
+            {"token": "Invalid or expired reset token."}  # nosec B105
+        )
     user.set_password(new_password)
     user.save(update_fields=("password",))
     _notify("Your Leeza Cakes password was reset", "Your password was reset.", user.email)

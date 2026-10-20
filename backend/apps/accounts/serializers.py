@@ -44,7 +44,9 @@ class RegistrationSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
-            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+            raise serializers.ValidationError(
+                {"password_confirm": "Passwords do not match."}  # nosec B105
+            )
         from django.contrib.auth.password_validation import validate_password
 
         validate_password(attrs["password"])
@@ -68,7 +70,9 @@ class PasswordChangeSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["new_password"] != attrs["new_password_confirm"]:
-            raise serializers.ValidationError({"new_password_confirm": "Passwords do not match."})
+            raise serializers.ValidationError(
+                {"new_password_confirm": "Passwords do not match."}  # nosec B105
+            )
         from django.contrib.auth.password_validation import validate_password
 
         validate_password(attrs["new_password"], self.context["request"].user)
@@ -87,7 +91,9 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["new_password"] != attrs["new_password_confirm"]:
-            raise serializers.ValidationError({"new_password_confirm": "Passwords do not match."})
+            raise serializers.ValidationError(
+                {"new_password_confirm": "Passwords do not match."}  # nosec B105
+            )
         from django.contrib.auth.password_validation import validate_password
 
         validate_password(attrs["new_password"])

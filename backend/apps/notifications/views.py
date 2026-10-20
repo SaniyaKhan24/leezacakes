@@ -1,3 +1,4 @@
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,4 +22,15 @@ class NotificationPreferenceView(APIView):
         preference = get_preferences(request.user)
         serializer = NotificationPreferenceSerializer(preference, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        return Response(NotificationPreferenceSerializer(serializer.save()).data)
+        updated = serializer.save()
+        if any(key.startswith("marketing_") and key.endswith("_enabled") for key in request.data):
+            updated.marketing_consent_recorded_at = timezone.now()
+            updated.marketing_consent_source = "account_settings"
+            updated.save(
+                update_fields=(
+                    "marketing_consent_recorded_at",
+                    "marketing_consent_source",
+                    "updated_at",
+                )
+            )
+        return Response(NotificationPreferenceSerializer(updated).data)
