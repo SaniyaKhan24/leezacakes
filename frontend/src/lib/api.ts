@@ -15,10 +15,42 @@ export type NotificationPreferences = { marketing_whatsapp_enabled: boolean; mar
 export type SearchResult = { id: string; name: string; slug: string; category: { slug: string; name: string }; primary_image: string | null; price: { amount: string | null; currency: string; display_type: string }; available: boolean; match_type: string };
 
 const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const ACCESS_TOKEN_KEY = "leeza-cakes.access-token";
+const REFRESH_TOKEN_KEY = "leeza-cakes.refresh-token";
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
-export function setSession(access: string | null, refresh: string | null) { accessToken = access; refreshToken = refresh; }
-export function clearSession() { accessToken = null; refreshToken = null; }
+function persistSession() {
+  if (typeof window === "undefined") return;
+  try {
+    if (accessToken) window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    else window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+    if (refreshToken) window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    else window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+  } catch {
+    // Storage can be unavailable in private browsing; in-memory auth still works.
+  }
+}
+export function setSession(access: string | null, refresh: string | null) {
+  accessToken = access;
+  refreshToken = refresh;
+  persistSession();
+}
+export function restoreSession() {
+  if (typeof window === "undefined") return false;
+  try {
+    accessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+    refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
+  } catch {
+    accessToken = null;
+    refreshToken = null;
+  }
+  return Boolean(accessToken || refreshToken);
+}
+export function clearSession() {
+  accessToken = null;
+  refreshToken = null;
+  persistSession();
+}
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
@@ -26,9 +58,23 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await fetch(`${base}${path}`, { ...init, headers, credentials: "include" });
   if (response.status === 401 && retry && refreshToken) {
-    const refreshed = await fetch(`${base}/api/v1/accounts/token/refresh/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh: refreshToken }), credentials: "include" });
-    if (refreshed.ok) { const payload = await refreshed.json(); accessToken = payload.data?.access ?? null; return request<T>(path, init, false); }
-    clearSession();
+    let refreshed: Response;
+    try {
+      refreshed = await fetch(`${base}/api/v1/accounts/token/refresh/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh: refreshToken }), credentials: "include" });
+    } catch (error) {
+      throw error;
+    }
+    if (refreshed.ok) {
+      const payload = await refreshed.json();
+      const nextAccess = payload.data?.access ?? null;
+      const nextRefresh = payload.data?.refresh ?? refreshToken;
+      if (nextAccess) {
+        setSession(nextAccess, nextRefresh);
+        return request<T>(path, init, false);
+      }
+    } else if (refreshed.status === 400 || refreshed.status === 401) {
+      clearSession();
+    }
   }
   if (!response.ok) { let payload: { detail?: string; error?: { detail?: string; [key: string]: unknown }; [key: string]: unknown } = {}; try { payload = await response.json(); } catch {} const body = payload.error && typeof payload.error === "object" ? payload.error : payload; const detail = typeof body.detail === "string" ? body.detail : response.status === 429 ? "Too many attempts. Please wait a moment and try again." : response.status >= 500 ? "The bakery service is temporarily unavailable. Please try again shortly." : "Request failed"; const error = new Error(detail) as ApiError; error.status = response.status; error.retryAfter = response.headers.get("Retry-After"); error.fields = Object.fromEntries(Object.entries(body).filter(([, value]) => Array.isArray(value))) as Record<string, string[]>; throw error; }
   if (response.status === 204) return undefined as T;
