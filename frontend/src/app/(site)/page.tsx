@@ -1,4 +1,5 @@
 import { ButtonLink } from "@/components/commerce-ui";
+import { Assembly } from "@/components/home/assembly";
 import { Featured } from "@/components/home/featured";
 import { Hero } from "@/components/home/hero";
 import { Inside } from "@/components/home/inside";
@@ -40,6 +41,7 @@ export default function Home() {
       <MenuIndex />
       <Inside />
       <Featured />
+      <Assembly />
       <MakeYours />
       <section className="section shell" aria-labelledby="process-title">
         <div className="section-head">

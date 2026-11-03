@@ -228,6 +228,8 @@ export type CakeStageProps = {
   shadowOpacity?: number;
   /** Extra Y rotation (radians) driven from outside, e.g. by scroll progress. */
   rotation?: MutableRefObject<number>;
+  /** Build the cake tier by tier (0 → 1), e.g. from scroll progress. */
+  assembly?: MutableRefObject<number>;
   onReady?: () => void;
 };
 
@@ -243,6 +245,7 @@ export function CakeStage({
   className,
   shadowOpacity = 0.42,
   rotation,
+  assembly,
   onReady,
 }: CakeStageProps) {
   const design = given ?? designFor(slug);
@@ -287,7 +290,13 @@ export function CakeStage({
             initial={initialRotation}
             rotation={rotation}
           >
-            <CakeModel design={design} extras={extras} slice={slice} />
+            <CakeModel
+              design={design}
+              extras={extras}
+              slice={slice}
+              // Reduced motion renders on demand only, so show the finished cake.
+              assembly={reduced ? undefined : assembly}
+            />
           </Spin>
           <ContactShadows
             position={[0, 0.001, 0]}
@@ -297,7 +306,7 @@ export function CakeStage({
             far={3}
             resolution={512}
             color="#3a2216"
-            frames={slice ? Infinity : 30}
+            frames={slice || assembly ? Infinity : 30}
           />
         </Suspense>
       </Canvas>

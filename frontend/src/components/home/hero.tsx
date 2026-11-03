@@ -1,13 +1,32 @@
 "use client";
 
-import { motion } from "motion/react";
+import {
+  motion,
+  useMotionValueEvent,
+  useScroll,
+  useTransform,
+} from "motion/react";
+import { useRef } from "react";
 import { ButtonLink } from "@/components/commerce-ui";
 import { LazyCake } from "@/components/cake/lazy-cake";
 import { EASE, FadeIn, Magnetic, SplitText } from "@/components/motion";
 
 export function Hero() {
+  const section = useRef<HTMLElement>(null);
+  const rotation = useRef(0);
+  // As the hero scrolls away the cake turns, sinks and steps back.
+  const { scrollYProgress } = useScroll({
+    target: section,
+    offset: ["start start", "end start"],
+  });
+  useMotionValueEvent(scrollYProgress, "change", (p) => {
+    rotation.current = p * Math.PI * 0.9;
+  });
+  const y = useTransform(scrollYProgress, [0, 1], [0, 220]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.78]);
+  const opacity = useTransform(scrollYProgress, [0, 0.85], [1, 0.15]);
   return (
-    <section className="hero" aria-labelledby="hero-title">
+    <section ref={section} className="hero" aria-labelledby="hero-title">
       <div className="shell hero-grid">
         <div className="hero-copy">
           <FadeIn delay={0.35}>
@@ -41,24 +60,30 @@ export function Hero() {
           </FadeIn>
         </div>
         <motion.div
-          className="hero-stage"
-          data-cursor="Drag"
-          initial={{ opacity: 0, scale: 0.92, y: 40 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 1.6, ease: EASE, delay: 0.3 }}
+          className="hero-stage hero-stage-scroll"
+          style={{ y, scale, opacity }}
         >
-          <LazyCake
-            slug="gilded-three-tier"
-            poster="/images/cakes/gilded-three-tier.webp"
-            interactive
-            autoRotate
-            initialRotation={-0.4}
-          />
-          <div className="hero-caption">
-            <span>Now baking</span>
-            <strong>The Gilded Three Tier</strong>
-            <span>Drag to turn it</span>
-          </div>
+          <motion.div
+            style={{ position: "absolute", inset: 0 }}
+            data-cursor="Drag"
+            initial={{ opacity: 0, scale: 0.92, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 1.6, ease: EASE, delay: 0.3 }}
+          >
+            <LazyCake
+              slug="gilded-three-tier"
+              poster="/images/cakes/gilded-three-tier.webp"
+              interactive
+              autoRotate
+              initialRotation={-0.4}
+              rotation={rotation}
+            />
+            <div className="hero-caption">
+              <span>Now baking</span>
+              <strong>The Gilded Three Tier</strong>
+              <span>Drag to turn it</span>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
       <div className="shell hero-facts">

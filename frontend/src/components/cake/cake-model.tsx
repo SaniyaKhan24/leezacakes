@@ -1098,6 +1098,20 @@ export type CakeModelProps = {
   slice?: MutableRefObject<number>;
   /** Jump straight to the slice position instead of easing (used for still photography). */
   sliceImmediate?: boolean;
+  /**
+   * 0 = an empty board, 1 = the finished cake. Tiers drop into place one by one,
+   * then the decorations settle on top. Read every frame; drive it from scroll.
+   */
+  assembly?: MutableRefObject<number>;
+};
+
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+const easeOut = (t: number) => 1 - Math.pow(1 - clamp01(t), 3);
+/** A soft landing with the smallest overshoot, like a tier being set down by hand. */
+const settle = (t: number) => {
+  const x = clamp01(t);
+  const c = 1.25;
+  return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2);
 };
 
 export function CakeModel({
@@ -1105,6 +1119,7 @@ export function CakeModel({
   extras,
   slice,
   sliceImmediate = false,
+  assembly,
 }: CakeModelProps) {
   const design = useMemo(
     () => applyExtras(baseDesign, extras),
@@ -1120,6 +1135,41 @@ export function CakeModel({
   const sliceGroup = useRef<THREE.Group>(null);
   const caps = useRef<THREE.Group>(null);
   const current = useRef(0);
+  const baseGroup = useRef<THREE.Group>(null);
+  const tierGroups = useRef<(THREE.Group | null)[]>([]);
+  const decor = useRef<THREE.Group>(null);
+  const built = useRef(assembly ? assembly.current : 1);
+
+  useFrame((_, delta) => {
+    if (!assembly) return;
+    built.current = THREE.MathUtils.damp(
+      built.current,
+      assembly.current,
+      6,
+      delta,
+    );
+    const p = built.current;
+    const n = design.tiers.length;
+    const span = 0.62 / n;
+    if (baseGroup.current) {
+      const b = easeOut(p / 0.1);
+      baseGroup.current.scale.set(0.6 + 0.4 * b, b || 0.0001, 0.6 + 0.4 * b);
+      baseGroup.current.visible = b > 0.001;
+    }
+    tierGroups.current.forEach((group, i) => {
+      if (!group) return;
+      const start = 0.1 + i * span;
+      const t = settle((p - start) / span);
+      group.position.y = plan.tierY[i] + (1 - t) * 3.4;
+      group.rotation.y = (1 - t) * 1.6;
+      group.visible = p > start;
+    });
+    if (decor.current) {
+      const t = settle((p - 0.76) / 0.2);
+      decor.current.position.y = (1 - t) * 1.4;
+      decor.current.visible = p > 0.76;
+    }
+  });
 
   useFrame((_, delta) => {
     if (!canSlice || !sliceGroup.current || !slice) return;
@@ -1140,7 +1190,9 @@ export function CakeModel({
 
   return (
     <group scale={scale}>
-      <Base design={design} radius={design.tiers[0].radius} />
+      <group ref={baseGroup}>
+        <Base design={design} radius={design.tiers[0].radius} />
+      </group>
       {design.tiers.map((tier, i) => {
         const y = plan.tierY[i];
         const mat = frostingMaterial(
@@ -1152,7 +1204,13 @@ export function CakeModel({
         const phiStart = cut ? SLICE_START + SLICE : 0;
         const phiLength = cut ? Math.PI * 2 - SLICE : Math.PI * 2;
         return (
-          <group key={i} position={[0, y, 0]}>
+          <group
+            key={i}
+            position={[0, y, 0]}
+            ref={(group) => {
+              tierGroups.current[i] = group;
+            }}
+          >
             <mesh
               geometry={tierGeometry(
                 tier.radius,
@@ -1192,7 +1250,9 @@ export function CakeModel({
           </group>
         );
       })}
-      <Toppings placements={main} />
+      <group ref={decor}>
+        <Toppings placements={main} />
+      </group>
       {canSlice && (
         <group ref={sliceGroup}>
           <group position={[0, plan.tierY[0], 0]}>
