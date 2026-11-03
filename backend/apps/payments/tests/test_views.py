@@ -1,5 +1,4 @@
 from django.contrib.auth.models import Permission
-from django.test import override_settings
 from rest_framework.test import APIClient
 
 from apps.payments.models import Payment
@@ -7,7 +6,6 @@ from apps.payments.models import Payment
 from .test_models import image_upload, order  # noqa: F401
 
 
-@override_settings(PAYMENT_EVIDENCE_STORAGE_ROOT="C:/tmp/leeza-payment-view-tests")
 def test_customer_submission_and_staff_review_api(order):  # noqa: F811
     payment = Payment.objects.create(order=order, user=order.user, amount_due=order.grand_total)
     client = APIClient()

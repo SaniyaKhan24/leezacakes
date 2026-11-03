@@ -28,7 +28,9 @@ def transition_order(order, to_status, actor, reason=""):
         order.completed_at = now
     if to_status == Order.CANCELLED:
         order.cancelled_at = now
-    order.save(update_fields=("status", "confirmed_at", "completed_at", "updated_at"))
+    order.save(
+        update_fields=("status", "confirmed_at", "completed_at", "cancelled_at", "updated_at")
+    )
     OrderStatusHistory.objects.create(
         order=order, from_status=old, to_status=to_status, changed_by=actor, reason=reason
     )

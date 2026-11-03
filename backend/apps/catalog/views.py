@@ -46,9 +46,13 @@ class CategoryListView(APIView):
         paginator = StandardPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         return (
-            paginator.get_paginated_response(CategoryPublicSerializer(page, many=True).data)
+            paginator.get_paginated_response(
+                CategoryPublicSerializer(page, many=True, context={"request": request}).data
+            )
             if page is not None
-            else Response(CategoryPublicSerializer(queryset, many=True).data)
+            else Response(
+                CategoryPublicSerializer(queryset, many=True, context={"request": request}).data
+            )
         )
 
 
@@ -58,7 +62,7 @@ class CategoryDetailView(APIView):
     @extend_schema(responses=CategoryPublicSerializer)
     def get(self, request, slug):
         category = get_object_or_404(public_categories(), slug=slug)
-        return Response(CategoryPublicSerializer(category).data)
+        return Response(CategoryPublicSerializer(category, context={"request": request}).data)
 
 
 class ProductListView(APIView):
@@ -103,9 +107,15 @@ class ProductListView(APIView):
         paginator = StandardPagination()
         page = paginator.paginate_queryset(queryset.distinct(), request, view=self)
         return (
-            paginator.get_paginated_response(ProductPublicSerializer(page, many=True).data)
+            paginator.get_paginated_response(
+                ProductPublicSerializer(page, many=True, context={"request": request}).data
+            )
             if page is not None
-            else Response(ProductPublicSerializer(queryset.distinct(), many=True).data)
+            else Response(
+                ProductPublicSerializer(
+                    queryset.distinct(), many=True, context={"request": request}
+                ).data
+            )
         )
 
 
@@ -115,7 +125,9 @@ class ProductDetailView(APIView):
     @extend_schema(responses=ProductPublicSerializer)
     def get(self, request, slug):
         return Response(
-            ProductPublicSerializer(get_object_or_404(public_products(), slug=slug)).data
+            ProductPublicSerializer(
+                get_object_or_404(public_products(), slug=slug), context={"request": request}
+            ).data
         )
 
 

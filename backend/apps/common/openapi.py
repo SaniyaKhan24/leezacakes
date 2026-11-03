@@ -13,6 +13,8 @@ class AppTagAutoSchema(AutoSchema):
         "payments": "Payments",
         "notifications": "Notifications",
         "search": "Search",
+        "enquiries": "Enquiries",
+        "site": "Site",
     }
 
     def get_tags(self):

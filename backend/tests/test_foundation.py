@@ -57,12 +57,17 @@ def test_schema_groups_operations_by_app_and_describes_each_tag(client):
         "Payments",
         "Notifications",
         "Search",
+        "Enquiries",
+        "Site",
         "Common",
     }
     assert set(tags) == expected
     assert tags["Accounts"]
     assert "Accounts" in schema["paths"]["/api/v1/accounts/register/"]["post"]["tags"]
     assert "Catalog" in schema["paths"]["/api/v1/catalog/products/"]["get"]["tags"]
+    assert "Enquiries" in schema["paths"]["/api/v1/enquiries/"]["post"]["tags"]
+    assert "Site" in schema["paths"]["/api/v1/site/"]["get"]["tags"]
+    assert "Orders" in schema["paths"]["/api/v1/orders/pickup-slots/"]["get"]["tags"]
 
 
 def test_docs_are_available_in_development(client):

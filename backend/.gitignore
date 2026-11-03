@@ -48,6 +48,8 @@ db.sqlite3
 db.sqlite3-journal
 media/
 staticfiles/
+# Customer payment proofs (private, never committed)
+private_payment_evidence/
 
 # ==========================================
 # Node.js / Next.js frontend

@@ -1,4 +1,8 @@
+import re
+from urllib.parse import parse_qs, urlsplit
+
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
@@ -175,6 +179,16 @@ def test_password_change_and_reset(api_client, user):
     assert User.objects.get(pk=user.pk).check_password("Reset-strong-123!")
 
 
+def link_params(body, path):
+    match = re.search(r"https?://\S+", body)
+    assert match, body
+    parsed = urlsplit(match.group(0))
+    assert f"{parsed.scheme}://{parsed.netloc}" == settings.FRONTEND_URL
+    assert parsed.path == path
+    query = parse_qs(parsed.query)
+    return query["uid"][0], query["token"][0]
+
+
 def test_email_verification_is_single_use(api_client, db):
     user = User.objects.create_user(email="verify@example.com", password="Strong-password-123!")
     with TestCase.captureOnCommitCallbacks(execute=True):
@@ -182,8 +196,8 @@ def test_email_verification_is_single_use(api_client, db):
             "/api/v1/accounts/email/verification/request/", {"email": user.email}, format="json"
         )
     assert response.status_code == 200
-    raw = mail.outbox[-1].body.split(": ", 1)[1]
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    uid, raw = link_params(mail.outbox[-1].body, "/auth/verify")
+    assert uid == urlsafe_base64_encode(force_bytes(user.pk))
     response = api_client.post(
         "/api/v1/accounts/email/verification/confirm/", {"uid": uid, "token": raw}, format="json"
     )
@@ -231,3 +245,69 @@ def test_address_selectors_are_user_scoped(user, db):
     address = Address.objects.create(user=user, **valid_address())
     assert list(user_addresses(user)) == [address]
     assert owned_address(user, address.id) == address
+
+
+def test_registration_email_link_verifies_account_and_allows_login(api_client, db):
+    with TestCase.captureOnCommitCallbacks(execute=True):
+        response = api_client.post(
+            "/api/v1/accounts/register/",
+            {
+                "email": "Linked@Example.com",
+                "password": "Strong-password-123!",
+                "password_confirm": "Strong-password-123!",
+                "first_name": "Meera",
+                "last_name": "Iyer",
+            },
+            format="json",
+        )
+    assert response.status_code == 201
+    message = mail.outbox[-1]
+    assert message.to == ["linked@example.com"]
+    assert message.body.startswith("Hi Meera,")
+    uid, token = link_params(message.body, "/auth/verify")
+    login = {"email": "linked@example.com", "password": "Strong-password-123!"}
+    assert api_client.post("/api/v1/accounts/login/", login, format="json").status_code == 401
+    confirmed = api_client.post(
+        "/api/v1/accounts/email/verification/confirm/",
+        {"uid": uid, "token": token},
+        format="json",
+    )
+    assert confirmed.status_code == 200
+    assert confirmed.data == {"data": {"is_email_verified": True}}
+    logged_in = api_client.post("/api/v1/accounts/login/", login, format="json")
+    assert logged_in.status_code == 200
+    assert logged_in.data["data"]["access"]
+
+
+def test_password_reset_email_link_resets_password(api_client, db):
+    user = User.objects.create_user(
+        email="reset-link@example.com", password="Strong-password-123!", is_email_verified=True
+    )
+    with TestCase.captureOnCommitCallbacks(execute=True):
+        api_client.post("/api/v1/accounts/password/reset/", {"email": user.email}, format="json")
+    uid, token = link_params(mail.outbox[-1].body, "/auth/reset")
+    response = api_client.post(
+        "/api/v1/accounts/password/reset/confirm/",
+        {
+            "uid": uid,
+            "token": token,
+            "new_password": "Linked-reset-123!",
+            "new_password_confirm": "Linked-reset-123!",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+    assert User.objects.get(pk=user.pk).check_password("Linked-reset-123!")
+
+
+def test_emails_fall_back_to_codes_without_frontend_url(api_client, db, settings):
+    settings.FRONTEND_URL = ""
+    user = User.objects.create_user(email="nolink@example.com", password="Strong-password-123!")
+    with TestCase.captureOnCommitCallbacks(execute=True):
+        api_client.post(
+            "/api/v1/accounts/email/verification/request/", {"email": user.email}, format="json"
+        )
+    body = mail.outbox[-1].body
+    assert "http" not in body
+    assert f"Account code: {urlsafe_base64_encode(force_bytes(user.pk))}" in body
+    assert "Token: " in body

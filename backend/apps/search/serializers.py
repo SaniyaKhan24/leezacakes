@@ -57,8 +57,12 @@ class SearchResultSerializer(serializers.Serializer):
         return {"slug": obj.category.slug, "name": obj.category.name}
 
     def get_primary_image(self, obj):
-        image = next(iter(obj.images.all()), None)
-        return image.image.url if image and image.image else None
+        images = list(obj.images.all())
+        image = next((item for item in images if item.is_primary), None) or next(iter(images), None)
+        if not image or not image.image:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(image.image.url) if request else image.image.url
 
     def get_price(self, obj):
         amount = getattr(obj, "eligible_price", None) or obj.base_price

@@ -13,6 +13,7 @@ from apps.cart.services.cart_service import validate_cart
 from apps.cart.services.pricing import cart_pricing
 
 from ..models import Order, OrderItem, OrderItemCustomization, OrderStatusHistory
+from .pickup import PickupConfig, cart_lead_time, is_available_slot
 
 
 def _fingerprint(data):
@@ -23,7 +24,12 @@ def _order_number():
     return f"LZ-{timezone.now():%Y%m%d}-{secrets.token_hex(3).upper()}"
 
 
-def _tax(subtotal):
+def tax_breakdown(subtotal):
+    """Return ``(tax_total, grand_total)`` for a subtotal under the configured policy.
+
+    With GST-inclusive prices the tax is the component already contained in the
+    subtotal, so the grand total equals the subtotal.
+    """
     if not getattr(settings, "ORDER_TAX_POLICY_CONFIGURED", False):
         raise ValidationError(
             {"checkout": "Checkout is unavailable until tax policy is configured."}
@@ -33,9 +39,34 @@ def _tax(subtotal):
         raise ValidationError(
             {"checkout": "Checkout is unavailable until tax policy is configured."}
         )
-    return (subtotal * Decimal(str(rate)) / Decimal("100")).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    rate = Decimal(str(rate))
+    cents = Decimal("0.01")
+    if getattr(settings, "ORDER_PRICES_INCLUDE_TAX", False):
+        net = (subtotal * Decimal("100") / (Decimal("100") + rate)).quantize(
+            cents, rounding=ROUND_HALF_UP
+        )
+        return subtotal - net, subtotal
+    tax = (subtotal * rate / Decimal("100")).quantize(cents, rounding=ROUND_HALF_UP)
+    return tax, subtotal + tax
+
+
+def validate_pickup_slot(cart, start, end, now=None):
+    if timezone.is_naive(start) or timezone.is_naive(end) or end <= start:
+        raise ValidationError(
+            {"pickup_slot": "Pickup slot must be a valid timezone-aware interval."}
+        )
+    config = PickupConfig.from_settings()
+    lead = cart_lead_time(cart, config)
+    if not is_available_slot(start, end, now or timezone.now(), lead, config):
+        raise ValidationError(
+            {
+                "pickup_slot": (
+                    "This pickup slot is not available. Choose one of the slots from "
+                    "/api/v1/orders/pickup-slots/ (orders need at least "
+                    f"{lead // 60} hours' notice)."
+                )
+            }
+        )
 
 
 @transaction.atomic
@@ -60,13 +91,9 @@ def create_order(user, checkout_data, idempotency_key):
         raise ValidationError({"cart": "Price confirmation is required before checkout."})
     start = checkout_data["pickup_slot_start"]
     end = checkout_data["pickup_slot_end"]
-    if timezone.is_naive(start) or timezone.is_naive(end) or end <= start:
-        raise ValidationError(
-            {"pickup_slot": "Pickup slot must be a valid timezone-aware interval."}
-        )
+    validate_pickup_slot(cart, start, end)
     lines, subtotal = cart_pricing(cart)
-    tax = _tax(subtotal)
-    grand = subtotal + tax
+    tax, grand = tax_breakdown(subtotal)
     order = Order.objects.create(
         order_number=_order_number(),
         user=user,

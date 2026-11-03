@@ -4,7 +4,6 @@ from io import BytesIO
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models.fields.files import FieldFile
-from django.test import override_settings
 from django.utils import timezone
 from PIL import Image
 from rest_framework.exceptions import ValidationError
@@ -46,7 +45,6 @@ def image_upload():
     return SimpleUploadedFile("receipt.png", stream.getvalue(), content_type="image/png")
 
 
-@override_settings(PAYMENT_EVIDENCE_STORAGE_ROOT="C:/tmp/leeza-payment-tests")
 def test_rejection_resubmission_and_verification(order):
     payment = Payment.objects.create(order=order, user=order.user, amount_due=order.grand_total)
     first = submit_evidence(payment, order.user, image_upload())

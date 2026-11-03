@@ -18,6 +18,7 @@ config = Config(
         "DJANGO_ALLOWED_HOSTS": "testserver,api.example.invalid",
         "CORS_ALLOWED_ORIGINS": "https://frontend.example.invalid",
         "CSRF_TRUSTED_ORIGINS": "https://frontend.example.invalid",
+        "FRONTEND_URL": "https://frontend.example.invalid",
         "HSTS_INCLUDE_SUBDOMAINS": "True",
         "HSTS_PRELOAD": "True",
         "DB_NAME": "unused",

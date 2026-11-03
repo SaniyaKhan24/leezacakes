@@ -9,6 +9,8 @@ from .base import *  # noqa: F403
 from .base import ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS
 
 DEBUG = False
+if config("DEV_USE_SQLITE", default=False, cast=bool):
+    raise ImproperlyConfigured("DEV_USE_SQLITE is development-only; production uses PostgreSQL.")
 SECRET_KEY = required("DJANGO_SECRET_KEY")
 if len(SECRET_KEY) < 50 or len(set(SECRET_KEY)) < 5 or SECRET_KEY.startswith("django-insecure-"):
     raise ImproperlyConfigured(
@@ -36,6 +38,10 @@ for name, origins in (
             or parsed.username
         ):
             raise ImproperlyConfigured(f"{name} requires explicit HTTPS origins without paths.")
+FRONTEND_URL = required("FRONTEND_URL").rstrip("/")
+_frontend = urlsplit(FRONTEND_URL)
+if _frontend.scheme != "https" or not _frontend.hostname or _frontend.query or _frontend.fragment:
+    raise ImproperlyConfigured("FRONTEND_URL must be an explicit HTTPS URL for email links.")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = True

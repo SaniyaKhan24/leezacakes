@@ -15,7 +15,9 @@ restrict direct backend access, then enable TRUST_PROXY_SSL_HEADER=True. Otherwi
 leave it False. Verify redirects, host rejection and secure cookies end-to-end
 before enabling traffic. Health probes must use HTTPS through the trusted ingress.
 
-Install hash-locked runtime requirements plus requirements-linux.txt.
+Install runtime requirements with `pip install -r requirement/production.txt` and set
+FRONTEND_URL (https), ORDER_TAX_RATE / ORDER_PRICES_INCLUDE_TAX, PAYMENT_UPI_* and
+SITE_* explicitly; see .env.example.
 Run manage.py check --deploy --fail-level WARNING with real production settings
 in the deployment environment. Synthetic checks prove settings behavior, not
 DNS, certificates, ingress or database reachability.

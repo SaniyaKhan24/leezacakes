@@ -25,10 +25,8 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: backend/requirements*.txt
-      - run: python -m pip install --require-hashes -r requirements-dev.txt
-      - name: Install Linux production server
-        if: runner.os == 'Linux'
-        run: python -m pip install --require-hashes -r requirements-linux.txt
+          cache-dependency-path: backend/requirement/*.txt
+      # requirement/*.txt are version-range manifests (not hash locks).
+      - run: python -m pip install -r requirement/development.txt
       - name: All offline checks (security workflow audits dependencies)
         run: python scripts/checks.py --skip-dependency-audit

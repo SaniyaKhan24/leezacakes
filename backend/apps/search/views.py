@@ -45,7 +45,9 @@ class SearchView(APIView):
                 "sort": filters["sort"],
                 "applied_filters": applied,
                 "fallback_used": False,
-                "results": SearchResultSerializer(results, many=True).data,
+                "results": SearchResultSerializer(
+                    results, many=True, context={"request": request}
+                ).data,
                 "facets": facets(queryset) if filters["include_facets"] else {},
                 "suggestions": [],
             }
