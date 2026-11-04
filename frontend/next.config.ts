@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
       { source: "/api/:path*", destination: `${backend}/api/:path*` },
       { source: "/media/:path*", destination: `${backend}/media/:path*` },
       { source: "/health/:path*", destination: `${backend}/health/:path*` },
+      // Staff alerts link into the Django admin; serve it from this origin too.
+      { source: "/admin/:path*/", destination: `${backend}/admin/:path*/` },
+      { source: "/admin/:path*", destination: `${backend}/admin/:path*` },
+      { source: "/admin", destination: `${backend}/admin/` },
+      { source: "/static/:path*", destination: `${backend}/static/:path*` },
     ];
   },
   turbopack: {

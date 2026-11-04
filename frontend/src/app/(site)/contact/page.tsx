@@ -3,6 +3,8 @@
 import { EnquiryForm } from "@/components/enquiry-form";
 import { FadeIn, SplitText } from "@/components/motion";
 import { useSiteConfig } from "@/components/site-footer";
+import { WhatsAppCta } from "@/components/whatsapp";
+import { GENERAL_TEXT } from "@/lib/whatsapp";
 
 export default function ContactPage() {
   const { data: site } = useSiteConfig();
@@ -37,6 +39,13 @@ export default function ContactPage() {
                 </div>
               ))}
             </dl>
+            <div style={{ marginTop: 32 }}>
+              <WhatsAppCta
+                title="Fastest: WhatsApp"
+                copy="Send a photo of what you have in mind and we'll reply with ideas and a price."
+                text={GENERAL_TEXT}
+              />
+            </div>
             {site?.is_sample && (
               <span className="sample-tag">Sample contact details</span>
             )}

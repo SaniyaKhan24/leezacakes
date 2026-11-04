@@ -10,6 +10,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
+import { NotificationBell } from "@/components/notification-bell";
 import { EASE, EASE_IN_OUT } from "@/components/motion";
 import { useAuth, useCart } from "@/components/providers";
 
@@ -72,6 +73,7 @@ export function SiteHeader() {
             >
               {user ? `Hi, ${user.first_name || "you"}` : "Sign in"}
             </Link>
+            <NotificationBell />
             <button
               type="button"
               className="bag-button"

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  describeChoices,
   OptionFields,
   SizePicker,
   useCakeBuilder,
@@ -23,7 +24,9 @@ import {
 } from "@/components/commerce-ui";
 import { EASE, FadeIn, RollingNumber, SplitText } from "@/components/motion";
 import { useCart } from "@/components/providers";
+import { WhatsAppCta } from "@/components/whatsapp";
 import { api } from "@/lib/api";
+import { productEnquiryText } from "@/lib/whatsapp";
 import { leadTime, money } from "@/lib/format";
 
 type View = "3d" | "inside" | "photos";
@@ -286,6 +289,13 @@ export function ProductView({ slug }: { slug: string }) {
                   </Button>
                 </div>
                 {error && <Notice tone="error">{error}</Notice>}
+                <WhatsAppCta
+                  text={productEnquiryText({
+                    name: p.name,
+                    size: builder.variant?.name,
+                    choices: describeChoices(builder),
+                  })}
+                />
                 <div className="pdp-assurance">
                   <p style={{ margin: 0 }}>
                     <strong>Baked for your pickup time.</strong> You&apos;ll

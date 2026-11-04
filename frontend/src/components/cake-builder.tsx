@@ -264,3 +264,20 @@ export function OptionFields({ builder }: { builder: Builder }) {
     </>
   );
 }
+
+/** Human-readable list of what's been chosen, for messages to the bakery. */
+export function describeChoices(builder: Builder) {
+  return builder.active.flatMap((option) => {
+    const current = builder.choices[option.id];
+    if (!current) return [];
+    if (option.option.input_type === "text") {
+      return current.text.trim()
+        ? [`${option.option.name}: "${current.text.trim()}"`]
+        : [];
+    }
+    const names = option.choices
+      .filter((c) => current.choiceIds.includes(c.id))
+      .map((c) => c.choice_name);
+    return names.length ? [`${option.option.name}: ${names.join(" + ")}`] : [];
+  });
+}

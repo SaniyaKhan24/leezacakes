@@ -17,7 +17,9 @@ import {
 } from "@/components/commerce-ui";
 import { EASE, FadeIn, SplitText } from "@/components/motion";
 import { useAuth } from "@/components/providers";
+import { WhatsAppCta } from "@/components/whatsapp";
 import { api, type Order, type Payment } from "@/lib/api";
+import { orderEnquiryText } from "@/lib/whatsapp";
 import {
   ORDER_STEPS,
   money,
@@ -506,6 +508,12 @@ function PaymentPanel({
           </motion.div>
         )}
       </AnimatePresence>
+      <WhatsAppCta
+        title="Questions about this order?"
+        copy="Message us on WhatsApp — your order number is already in the message."
+        label="WhatsApp us"
+        text={orderEnquiryText(order.order_number)}
+      />
       <Link
         href="/account"
         className="text-link"

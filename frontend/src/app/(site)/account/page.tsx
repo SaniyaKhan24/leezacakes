@@ -4,8 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
   Button,
@@ -17,15 +17,29 @@ import {
 } from "@/components/commerce-ui";
 import { EASE } from "@/components/motion";
 import { useAuth } from "@/components/providers";
+import { isInternal, timeAgo, useInbox } from "@/components/notification-bell";
 import { api, type ApiError } from "@/lib/api";
 import { money, shortDate, slotDay, statusLabel } from "@/lib/format";
 
-type Tab = "orders" | "profile" | "addresses";
+type Tab = "orders" | "notifications" | "profile" | "addresses";
+const TABS: Tab[] = ["orders", "notifications", "profile", "addresses"];
 
 export default function AccountPage() {
+  return (
+    <Suspense fallback={null}>
+      <Account />
+    </Suspense>
+  );
+}
+
+function Account() {
   const { user, loading, logout, refresh } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("orders");
+  const params = useSearchParams();
+  const requested = params.get("tab") as Tab | null;
+  const [picked, setTab] = useState<Tab | null>(null);
+  const tab: Tab =
+    picked ?? (requested && TABS.includes(requested) ? requested : "orders");
   useEffect(() => {
     if (!loading && !user) router.replace("/auth/login?next=/account");
   }, [loading, user, router]);
@@ -48,6 +62,7 @@ export default function AccountPage() {
             [
               ["orders", "Orders"],
               ["profile", "Details"],
+              ["notifications", "Updates"],
               ["addresses", "Addresses"],
             ] as const
           ).map(([key, label]) => (
@@ -81,6 +96,7 @@ export default function AccountPage() {
             {tab === "orders" && <Orders />}
             {tab === "profile" && <Profile onSaved={refresh} />}
             {tab === "addresses" && <Addresses />}
+            {tab === "notifications" && <Updates />}
           </motion.section>
         </AnimatePresence>
       </div>
@@ -345,6 +361,67 @@ function Addresses() {
           Add an address
         </Button>
       )}
+    </div>
+  );
+}
+
+function Updates() {
+  const router = useRouter();
+  const { markRead } = useInbox(true);
+  const inbox = useQuery({
+    queryKey: ["inbox", "list", "all"],
+    queryFn: () => api.inbox(1, 50),
+  });
+  if (inbox.isLoading) return <Skeleton className="sk-block" />;
+  if (!inbox.data?.results.length) {
+    return (
+      <EmptyState
+        title="No updates yet."
+        copy="When you place an order, every step — payment received, in the oven, ready for pickup — shows up here."
+      />
+    );
+  }
+  return (
+    <div style={{ display: "grid", gap: 18 }}>
+      {inbox.data.unread_count > 0 && (
+        <button
+          type="button"
+          className="link-button"
+          style={{ justifySelf: "start" }}
+          onClick={() => markRead({ all: true })}
+        >
+          Mark all as read
+        </button>
+      )}
+      <ul className="updates">
+        {inbox.data.results.map((item, i) => (
+          <motion.li
+            key={item.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.03, duration: 0.45, ease: EASE }}
+          >
+            <button
+              type="button"
+              className={item.read_at ? "" : "is-unread"}
+              onClick={async () => {
+                if (!item.read_at)
+                  await markRead({ ids: [item.id] }).catch(() => undefined);
+                if (isInternal(item.link)) router.push(item.link);
+                else if (item.link)
+                  window.open(item.link, "_blank", "noopener");
+              }}
+            >
+              <span className="bell-dot" aria-hidden="true" />
+              <span>
+                <strong>{item.title}</strong>
+                <span>{item.body}</span>
+              </span>
+              <small>{timeAgo(item.created_at)}</small>
+            </button>
+          </motion.li>
+        ))}
+      </ul>
     </div>
   );
 }

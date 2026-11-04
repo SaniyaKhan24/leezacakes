@@ -237,10 +237,29 @@ export type SiteConfig = {
   contact_phone: string | null;
   contact_email: string | null;
   whatsapp: string | null;
+  /** Digits-only international number for wa.me links, e.g. "919000000000". */
+  whatsapp_link_number?: string | null;
   instagram: string | null;
   address: string | null;
   pickup_hours_label: string | null;
   is_sample: boolean;
+};
+export type InboxItem = {
+  id: number;
+  event_key: string;
+  audience: "customer" | "staff";
+  title: string;
+  body: string;
+  link: string;
+  created_at: string;
+  read_at: string | null;
+};
+export type Inbox = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  unread_count: number;
+  results: InboxItem[];
 };
 export type SearchResult = {
   id: string;
@@ -539,6 +558,20 @@ export const api = {
       { method: "POST", body: form },
     );
   },
+
+  inbox: (page = 1, pageSize = 20) =>
+    request<Inbox>(
+      `/api/v1/notifications/inbox/?page=${page}&page_size=${pageSize}`,
+    ),
+  unreadCount: () =>
+    request<{ unread_count: number }>(
+      "/api/v1/notifications/inbox/unread-count/",
+    ),
+  markRead: (body: { ids: number[] } | { all: true }) =>
+    request<{ unread_count: number }>("/api/v1/notifications/inbox/read/", {
+      method: "POST",
+      body: json(body),
+    }),
 
   site: () =>
     request<{ data: SiteConfig } | SiteConfig>("/api/v1/site/").then(unwrap),

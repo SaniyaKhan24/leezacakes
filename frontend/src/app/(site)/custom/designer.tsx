@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
+  describeChoices,
   OptionFields,
   SizePicker,
   useCakeBuilder,
@@ -21,7 +22,9 @@ import {
 import { EnquiryForm } from "@/components/enquiry-form";
 import { EASE, FadeIn, RollingNumber, SplitText } from "@/components/motion";
 import { useCart } from "@/components/providers";
+import { WhatsAppCta } from "@/components/whatsapp";
 import { api } from "@/lib/api";
+import { productEnquiryText } from "@/lib/whatsapp";
 import { leadTime, money } from "@/lib/format";
 
 export function Designer() {
@@ -170,6 +173,17 @@ export function Designer() {
             </Button>
           </div>
           {error && <Notice tone="error">{error}</Notice>}
+          {product && (
+            <WhatsAppCta
+              title="Can't find the option you want?"
+              copy="Send us this design on WhatsApp and tell us what to change — a theme, a photo print, a different sponge."
+              text={productEnquiryText({
+                name: product.name,
+                size: builder.variant?.name,
+                choices: describeChoices(builder),
+              })}
+            />
+          )}
           {product?.preparation_time ? (
             <p className="lead-note">
               This cake needs {leadTime(product.preparation_time)}. You&apos;ll

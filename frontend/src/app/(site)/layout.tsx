@@ -2,6 +2,7 @@ import { CartDrawer } from "@/components/cart-drawer";
 import { Cursor, SmoothScroll } from "@/components/motion";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { WhatsAppFab } from "@/components/whatsapp";
 
 export default function SiteLayout({
   children,
@@ -17,6 +18,7 @@ export default function SiteLayout({
       <div id="main">{children}</div>
       <SiteFooter />
       <CartDrawer />
+      <WhatsAppFab />
       <Cursor />
       <div className="grain" aria-hidden="true" />
     </SmoothScroll>

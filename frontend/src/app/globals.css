@@ -2987,3 +2987,228 @@ h3 em,
     height: 50svh;
   }
 }
+
+/* ---------- notifications ---------- */
+
+.bell {
+  position: relative;
+}
+.bell-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    background 0.3s,
+    color 0.3s;
+}
+.bell-button:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.bell-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--rose-deep);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 600;
+}
+.bell-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: -60px;
+  z-index: 105;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 30px 80px -30px rgba(34, 17, 12, 0.4);
+  overflow: hidden;
+}
+.bell-panel header,
+.bell-panel footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+.bell-panel header {
+  border-bottom: 1px solid var(--line);
+}
+.bell-panel header strong {
+  font-family: var(--font-display), serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+.bell-panel footer {
+  border-top: 1px solid var(--line);
+}
+.bell-panel ul,
+.updates {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+.bell-panel li button,
+.updates li button {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 20px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+  transition: background 0.3s;
+}
+.bell-panel li button:hover,
+.updates li button:hover {
+  background: var(--linen);
+}
+.bell-panel li button > span:last-child,
+.updates li button > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.bell-panel strong,
+.updates strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+.bell-panel small,
+.updates small {
+  color: var(--faint);
+  font-size: 11px;
+}
+.bell-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+}
+.is-unread .bell-dot {
+  background: var(--rose);
+}
+.bell-empty {
+  margin: 0;
+  padding: 26px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.updates {
+  border-top: 1px solid var(--line-strong);
+}
+.updates li button {
+  grid-template-columns: 10px 1fr auto;
+  padding: 20px 0;
+}
+.updates li button > span:nth-child(2) {
+  font-size: 14px;
+}
+.updates strong {
+  font-family: var(--font-display), serif;
+  font-size: 22px;
+}
+
+/* ---------- WhatsApp ---------- */
+
+.wa-cta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  transition:
+    border-color 0.4s var(--ease),
+    transform 0.5s var(--ease),
+    box-shadow 0.5s var(--ease);
+}
+.wa-cta:hover {
+  border-color: #25d366;
+  transform: translateY(-2px);
+  box-shadow: 0 20px 50px -30px rgba(18, 140, 126, 0.55);
+}
+.wa-cta-icon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+}
+.wa-cta-text {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.wa-cta-text strong {
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 15px;
+}
+.wa-cta-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #128c7e;
+}
+.wa-fab {
+  position: fixed;
+  right: clamp(16px, 2.5vw, 32px);
+  bottom: clamp(16px, 2.5vw, 32px);
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 58px;
+  min-width: 58px;
+  padding: 0 17px;
+  border-radius: 999px;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 18px 40px -16px rgba(18, 140, 126, 0.7);
+  overflow: hidden;
+}
+.wa-fab-label {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+@media (max-width: 900px) {
+  .bell-panel {
+    right: -100px;
+  }
+  .bell-button {
+    width: 42px;
+    height: 42px;
+  }
+}
