@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { AppProviders } from "@/components/providers";
 import "./globals.css";
+import "./home-hero.css";
 
 const display = Cormorant_Garamond({
   subsets: ["latin"],

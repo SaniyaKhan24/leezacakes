@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { NotificationBell } from "@/components/notification-bell";
 import { EASE, EASE_IN_OUT } from "@/components/motion";
@@ -72,6 +73,13 @@ export function SiteHeader() {
               className="action-link"
             >
               {user ? `Hi, ${user.first_name || "you"}` : "Sign in"}
+            </Link>
+            <Link
+              href="/shop"
+              className="bell-button"
+              aria-label="Search cakes"
+            >
+              <Search size={17} strokeWidth={1.6} />
             </Link>
             <NotificationBell />
             <button

@@ -1134,92 +1134,10 @@ h3 em,
    Home
    ========================================================================== */
 
-.hero {
-  position: relative;
-  min-height: 100svh;
-  padding-top: calc(var(--header-h) + 40px);
-  overflow: hidden;
-}
-.hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  align-items: center;
-  gap: 20px;
-  min-height: calc(100svh - var(--header-h) - 80px);
-}
-.hero-copy h1 {
-  font-size: clamp(64px, 9.4vw, 158px);
-}
-.hero-copy .lede {
-  margin: 34px 0 40px;
-}
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-}
-.hero-stage {
-  position: relative;
-  height: min(78vh, 760px);
-}
-.hero-stage::before {
-  content: "";
-  position: absolute;
-  inset: 8% 4% 4%;
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    rgba(236, 215, 207, 0.95),
-    rgba(236, 215, 207, 0) 72%
-  );
-}
-.hero-caption {
-  position: absolute;
-  right: 0;
-  bottom: 6%;
-  display: grid;
-  gap: 4px;
-  text-align: right;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.hero-caption strong {
-  font-family: var(--font-display), serif;
-  font-size: 26px;
-  font-weight: 400;
-  font-style: italic;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  color: var(--ink);
-}
-.hero-facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
-  margin-top: 8px;
-}
-.hero-facts > div {
-  display: flex;
-  gap: 14px;
-  padding: 22px 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-.hero-facts span {
-  color: var(--rose);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-}
-.hero-facts strong {
-  display: block;
-  color: var(--ink);
-  font-family: var(--font-display), serif;
-  font-size: 22px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
 }
 .stage-fallback {
   position: absolute;
@@ -2682,7 +2600,6 @@ h3 em,
     height: 46px;
     padding: 0 6px 0 16px;
   }
-  .hero-grid,
   .inside-sticky,
   .make-grid,
   .pdp,
@@ -2696,20 +2613,6 @@ h3 em,
   .bespoke,
   .footer-top {
     grid-template-columns: 1fr;
-  }
-  .hero-stage {
-    height: 58vh;
-    order: -1;
-  }
-  .hero-caption {
-    display: none;
-  }
-  .hero-facts {
-    grid-template-columns: 1fr;
-  }
-  .hero-facts > div {
-    padding: 14px 0;
-    border-bottom: 1px solid var(--line);
   }
   .menu-row {
     grid-template-columns: 40px minmax(0, 1fr) 28px;
@@ -2971,9 +2874,18 @@ h3 em,
   inset: 0 auto 0 0;
   background: var(--ink);
 }
-.hero-stage-scroll {
-  position: relative;
-  will-change: transform;
+/* Home hero (home-hero.css) with the 3D cake in its centre column. The site
+   header is fixed, so the card starts below it. */
+#main .hero-stage {
+  margin-top: calc(var(--header-h) + 30px);
+}
+.hero-cake-3d {
+  position: absolute;
+  inset: 2% -4% 10%;
+  z-index: 1;
+}
+.hero-cake-placeholder .hero-placeholder-note {
+  z-index: 2;
 }
 @media (max-width: 900px) {
   .assembly-track {

@@ -1,7 +1,7 @@
 import { ButtonLink } from "@/components/commerce-ui";
 import { Assembly } from "@/components/home/assembly";
 import { Featured } from "@/components/home/featured";
-import { Hero } from "@/components/home/hero";
+import { HomeHero } from "@/components/home-hero";
 import { Inside } from "@/components/home/inside";
 import { MakeYours } from "@/components/home/make-yours";
 import { MenuIndex } from "@/components/home/menu-index";
@@ -28,7 +28,7 @@ const PROCESS = [
 export default function Home() {
   return (
     <main>
-      <Hero />
+      <HomeHero />
       <Marquee
         items={[
           "Baked to order",
