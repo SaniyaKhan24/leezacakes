@@ -28,11 +28,13 @@ def transition_order(order, to_status, actor, reason=""):
         order.completed_at = now
     if to_status == Order.CANCELLED:
         order.cancelled_at = now
-    order.save(update_fields=("status", "confirmed_at", "completed_at", "updated_at"))
+    order.save(
+        update_fields=("status", "confirmed_at", "completed_at", "cancelled_at", "updated_at")
+    )
     OrderStatusHistory.objects.create(
         order=order, from_status=old, to_status=to_status, changed_by=actor, reason=reason
     )
-    from apps.notifications.services import emit_event
+    from apps.notifications.services import emit_event, order_payload
 
     event_key = {
         Order.CONFIRMED: "order_confirmed",
@@ -44,7 +46,7 @@ def transition_order(order, to_status, actor, reason=""):
         emit_event(
             event_key,
             user=order.user,
-            payload={"order_number": order.order_number, "status": to_status},
+            payload=order_payload(order),
             deduplication_key=f"order:{order.id}:{event_key}",
         )
     return order

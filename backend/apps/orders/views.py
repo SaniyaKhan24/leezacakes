@@ -1,10 +1,12 @@
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.cart.selectors import active_cart_for_request
 from apps.common.pagination import StandardPagination
 
 from .models import Order
@@ -12,11 +14,26 @@ from .serializers import (
     CheckoutSerializer,
     OrderDetailSerializer,
     OrderListSerializer,
+    PickupSlotsSerializer,
     StaffOrderSerializer,
     TransitionSerializer,
 )
 from .services.checkout import create_order
+from .services.pickup import PickupConfig, cart_lead_time, generate_days, serialize_days
 from .services.transitions import transition_order
+
+
+class PickupSlotsView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses=PickupSlotsSerializer)
+    def get(self, request):
+        config = PickupConfig.from_settings()
+        lead = cart_lead_time(active_cart_for_request(request), config)
+        days = generate_days(timezone.now(), lead, config)
+        return Response(
+            {"lead_time_minutes": lead, "timezone": config.timezone, "days": serialize_days(days)}
+        )
 
 
 class CustomerOrderListCreateView(APIView):

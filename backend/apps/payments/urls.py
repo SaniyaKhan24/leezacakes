@@ -13,6 +13,7 @@ from .views import (
     StaffVerifyPaymentView,
 )
 
+app_name = "payments"
 urlpatterns = [
     path("orders/<uuid:order_id>/", CustomerPaymentByOrderView.as_view()),
     path("staff/", StaffPaymentListView.as_view()),
@@ -26,6 +27,7 @@ urlpatterns = [
     path(
         "staff/<uuid:payment_id>/submissions/<uuid:submission_id>/evidence/",
         StaffEvidenceView.as_view(),
+        name="staff-evidence",
     ),
     path("<uuid:payment_id>/", CustomerPaymentView.as_view()),
     path("<uuid:payment_id>/submissions/", CustomerSubmissionListCreateView.as_view()),

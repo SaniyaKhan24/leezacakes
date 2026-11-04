@@ -1,9 +1,12 @@
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import include, path
 from django.views.generic import TemplateView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+from apps.common.views import SiteConfigView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -16,6 +19,8 @@ urlpatterns = [
     path("api/v1/payments/", include("apps.payments.urls")),
     path("api/v1/notifications/", include("apps.notifications.urls")),
     path("api/v1/search/", include("apps.search.urls")),
+    path("api/v1/enquiries/", include("apps.enquiries.urls")),
+    path("api/v1/site/", SiteConfigView.as_view(), name="site-config"),
 ]
 if settings.API_DOCS_ENABLED:
     urlpatterns += [
@@ -28,3 +33,4 @@ if settings.API_DOCS_ENABLED:
 
 if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

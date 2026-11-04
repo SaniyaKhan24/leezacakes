@@ -1,2 +1,20 @@
 import Link from "next/link";
-export default function NotFound() { return <main className="center-page"><p className="eyebrow">404</p><h1>That page has gone missing.</h1><p>Let’s get you back to the good stuff.</p><Link className="shop-button" href="/shop">Browse cakes</Link></main>; }
+
+export default function NotFound() {
+  return (
+    <main className="not-found">
+      <div>
+        <p className="eyebrow">Page not found</p>
+        <h1>
+          4<em>0</em>4
+        </h1>
+        <p className="lede" style={{ margin: "24px auto 36px" }}>
+          This page has been eaten. The cakes, happily, are all still here.
+        </p>
+        <Link href="/shop" className="btn btn-dark">
+          <span className="btn-label">Back to the cakes</span>
+        </Link>
+      </div>
+    </main>
+  );
+}

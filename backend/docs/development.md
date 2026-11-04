@@ -10,22 +10,17 @@ DB_HOST, DB_PORT and DB_SSLMODE. TLS require is the baseline; verify-full plus
 appropriate provider CA configuration should be evaluated for certificate identity
 verification. Transaction-pool compatibility disables server-side cursors.
 
-requirements.in / requirements-dev.in / requirements-linux.in express intentional
-constraints. Generated .txt files pin transitive versions and hashes. Linux adds
-the separate gunicorn lock because Windows resolution omits the runtime marker.
-Install dev tools from requirements-dev.txt; Linux deployments install both
-requirements.txt and requirements-linux.txt with --require-hashes.
-
-Update locks with the same Python/pip-tools versions from the dev lock:
+Dependencies are version-range manifests in requirement/: base.txt (runtime),
+development.txt (base + Ruff, pytest, coverage, Bandit, pip-audit) and
+production.txt (base). They are not hash locks, so install without
+--require-hashes:
 ```powershell
-.\.venv\Scripts\python.exe -m piptools compile --upgrade --generate-hashes --allow-unsafe --strip-extras -o requirements.txt requirements.in
-.\.venv\Scripts\python.exe -m piptools compile --upgrade --generate-hashes --allow-unsafe --strip-extras -o requirements-dev.txt requirements-dev.in
-.\.venv\Scripts\python.exe -m piptools compile --upgrade --generate-hashes --allow-unsafe --strip-extras -o requirements-linux.txt requirements-linux.in
-.\.venv\Scripts\python.exe -m pip install --require-hashes -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pip install -r requirement\development.txt
 .\scripts\pre-push.ps1
 ```
-Review all three lock diffs and run Linux/Windows CI. Platform markers/wheel
-availability mean the lock is not a claim of bit-identical cross-platform builds.
+pip-audit resolves each manifest (`-r requirement/<file>.txt`); keep lower bounds at
+versions without known advisories. If reproducible installs are needed later,
+generate hash locks from these manifests and switch CI back to --require-hashes.
 
 Pre-push order: package compatibility, Ruff lint/format, Django checks, synthetic
 production deploy checks, migration consistency, pytest with branch coverage

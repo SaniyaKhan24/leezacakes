@@ -1,13 +1,16 @@
 import hashlib
 import secrets
 from datetime import timedelta
+from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
-from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -18,6 +21,28 @@ User = get_user_model()
 
 def _notify(subject, body, recipient):
     transaction.on_commit(lambda: send_mail(subject, body, None, [recipient], fail_silently=True))
+
+
+def user_uid(user):
+    return urlsafe_base64_encode(force_bytes(user.pk))
+
+
+def frontend_link(path, **params):
+    """Build a frontend URL for emails, or None when FRONTEND_URL is not configured."""
+    base = getattr(settings, "FRONTEND_URL", "")
+    if not base:
+        return None
+    return f"{base}{path}?{urlencode(params)}"
+
+
+def _greeting(user):
+    return f"Hi {user.first_name}," if user.first_name else "Hello,"
+
+
+def _link_or_codes(link, uid, token):
+    if link:
+        return link
+    return f"Account code: {uid}\nToken: {token}"
 
 
 @transaction.atomic
@@ -49,7 +74,17 @@ def issue_verification_token(user):
         token_digest=digest,
         expires_at=timezone.now() + timedelta(hours=24),
     )
-    _notify("Verify your Leeza Cakes email", f"Verification token: {raw}", user.email)
+    uid = user_uid(user)
+    link = frontend_link("/auth/verify", uid=uid, token=raw)
+    body = (
+        f"{_greeting(user)}\n\n"
+        "Thanks for creating a Leeza Cakes account. Confirm your email address to finish "
+        "signing up:\n\n"
+        f"{_link_or_codes(link, uid, raw)}\n\n"
+        "This link expires in 24 hours. If you did not create an account, you can ignore "
+        "this email.\n\nLeeza Cakes"
+    )
+    _notify("Verify your Leeza Cakes email", body, user.email)
     return record, raw
 
 
@@ -99,12 +134,18 @@ def change_password(user, current_password, new_password):
 def request_password_reset(email):
     user = User.objects.filter(email__iexact=email.strip().lower(), is_active=True).first()
     if user:
-        from django.utils.encoding import force_bytes
-        from django.utils.http import urlsafe_base64_encode
-
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        uid = user_uid(user)
         token = default_token_generator.make_token(user)
-        _notify("Reset your Leeza Cakes password", f"Reset uid: {uid}; token: {token}", user.email)
+        link = frontend_link("/auth/reset", uid=uid, token=token)
+        body = (
+            f"{_greeting(user)}\n\n"
+            "We received a request to reset your Leeza Cakes password. Choose a new one "
+            "here:\n\n"
+            f"{_link_or_codes(link, uid, token)}\n\n"
+            "If you did not ask for this, you can ignore this email; your password stays "
+            "the same.\n\nLeeza Cakes"
+        )
+        _notify("Reset your Leeza Cakes password", body, user.email)
 
 
 @transaction.atomic

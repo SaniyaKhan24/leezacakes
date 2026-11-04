@@ -1,3 +1,4 @@
+from django.conf import settings
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -81,6 +82,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     payment = serializers.SerializerMethodField()
     customer = serializers.SerializerMethodField()
     pickup = serializers.SerializerMethodField()
+    prices_include_tax = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -97,6 +99,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "discount_total",
             "tax_total",
             "grand_total",
+            "prices_include_tax",
             "customer_note",
             "items",
             "created_at",
@@ -106,7 +109,16 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField())
     def get_payment(self, obj):
-        return {"status": obj.payment_status}
+        payment = getattr(obj, "payment", None)
+        return {
+            "status": obj.payment_status,
+            "id": str(payment.id) if payment else None,
+            "review_status": payment.status if payment else None,
+        }
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_prices_include_tax(self, obj):
+        return bool(getattr(settings, "ORDER_PRICES_INCLUDE_TAX", False))
 
     @extend_schema_field(serializers.DictField())
     def get_customer(self, obj):
@@ -133,3 +145,20 @@ class StaffOrderSerializer(OrderDetailSerializer):
 class TransitionSerializer(serializers.Serializer):
     to_status = serializers.ChoiceField(choices=Order.STATUS_CHOICES)
     reason = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+
+class PickupSlotSerializer(serializers.Serializer):
+    start = serializers.DateTimeField()
+    end = serializers.DateTimeField()
+    available = serializers.BooleanField()
+
+
+class PickupDaySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    slots = PickupSlotSerializer(many=True)
+
+
+class PickupSlotsSerializer(serializers.Serializer):
+    lead_time_minutes = serializers.IntegerField()
+    timezone = serializers.CharField()
+    days = PickupDaySerializer(many=True)

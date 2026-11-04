@@ -118,3 +118,55 @@ def test_cart_selector_returns_only_current_cart(product):
     guest_cart = get_or_create_cart(guest_request)
     assert owned_cart(guest_request) == guest_cart
     assert CartAccessPermission().has_permission(guest_request, None)
+
+
+def test_guest_cart_merge_keeps_text_and_multiple_choice_customizations(product):
+    from apps.customization.models import (
+        CustomizationChoice,
+        CustomizationOption,
+        ProductCustomization,
+        ProductCustomizationChoice,
+    )
+
+    message = CustomizationOption.objects.create(name="Message", slug="message", input_type="text")
+    toppings = CustomizationOption.objects.create(
+        name="Toppings", slug="toppings", input_type="multiple_choice"
+    )
+    ProductCustomization.objects.create(product=product, option=message)
+    config = ProductCustomization.objects.create(product=product, option=toppings, max_selections=3)
+    choice_ids = []
+    for slug, price in (("gold", "300.00"), ("flowers", "250.00")):
+        choice = CustomizationChoice.objects.create(option=toppings, name=slug, slug=slug)
+        ProductCustomizationChoice.objects.create(
+            product_customization=config, choice=choice, price_adjustment=price
+        )
+        choice_ids.append(choice.id)
+    client = APIClient()
+    added = client.post(
+        "/api/v1/cart/items/",
+        {
+            "product_id": product.id,
+            "quantity": 1,
+            "selections": [
+                {"option_id": toppings.id, "choice_ids": choice_ids},
+                {"option_id": message.id, "text_value": "Happy birthday"},
+            ],
+        },
+        format="json",
+    )
+    assert added.status_code == 201
+    assert added.data["subtotal"] == "1050.00"
+    validated = client.post("/api/v1/cart/validate/", {}, format="json")
+    assert validated.data["valid"] is True
+    user = User.objects.create_user(
+        email="merge@example.com", password="Strong-password-123!", is_email_verified=True
+    )
+    client.force_authenticate(user=user)
+    merged = client.post("/api/v1/cart/merge/", {}, format="json")
+    assert merged.status_code == 200
+    assert merged.data["issues"] == []
+    assert merged.data["merged"] is True
+    assert merged.data["cart"]["subtotal"] == "1050.00"
+    item = owned_cart(type("Request", (), {"user": user})()).items.get()
+    assert item.customizations.count() == 3
+    assert item.customizations.filter(text_value="Happy birthday").exists()

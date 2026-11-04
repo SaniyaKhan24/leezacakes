@@ -66,6 +66,18 @@ def item_selection_key(item):
     return selection_key(rows)
 
 
+def item_selections(item):
+    """Rebuild API-shaped selections (one entry per option) from stored cart rows."""
+    selections = {}
+    for row in item.customizations.all():
+        entry = selections.setdefault(row.option_id, {"option_id": row.option_id})
+        if row.choice_id:
+            entry.setdefault("choice_ids", []).append(row.choice_id)
+        else:
+            entry["text_value"] = row.text_value
+    return list(selections.values())
+
+
 def _eligible_product(product_id, variant_id):
     product = Product.objects.filter(
         id=product_id, status=Product.PUBLISHED, is_available=True, category__is_active=True
@@ -162,15 +174,8 @@ def validate_cart(cart):
             "issues": [str(exc)],
         }
     for item, pricing in lines:
-        selections = {}
-        for row in item.customizations.all():
-            entry = selections.setdefault(row.option_id, {"option_id": row.option_id})
-            if row.choice_id:
-                entry.setdefault("choice_ids", []).append(row.choice_id)
-            else:
-                entry["text_value"] = row.text_value
         try:
-            validate_selections(item.product, list(selections.values()))
+            validate_selections(item.product, item_selections(item))
         except ValidationError as exc:
             issues.append(
                 {"item_id": str(item.id), "reason": "customization_invalid", "detail": exc.detail}
@@ -231,17 +236,9 @@ def merge_guest_cart(request):
         return target, []
     issues = []
     for item in list(guest.items.prefetch_related("customizations")):
-        selections = [
-            {
-                "option_id": row.option_id,
-                "choice_ids": [row.choice_id] if row.choice_id else [],
-                "text_value": row.text_value,
-            }
-            for row in item.customizations.all()
-        ]
         try:
             merged, _ = add_item(
-                target, item.product_id, item.variant_id, item.quantity, selections
+                target, item.product_id, item.variant_id, item.quantity, item_selections(item)
             )
             item.delete()
         except ValidationError as exc:

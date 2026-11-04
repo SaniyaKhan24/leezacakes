@@ -1,4 +1,5 @@
 from decimal import Decimal
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from drf_spectacular.utils import extend_schema_field
@@ -24,15 +25,58 @@ class SubmissionSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class PaymentInstructionsSerializer(serializers.Serializer):
+    upi_id = serializers.CharField()
+    payee_name = serializers.CharField(allow_blank=True)
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    currency = serializers.CharField()
+    upi_uri = serializers.CharField()
+    note = serializers.CharField()
+    is_sample = serializers.BooleanField()
+
+
+def payment_instructions(payment):
+    """UPI instructions for a payment, or None when no UPI ID is configured."""
+    upi_id = getattr(settings, "PAYMENT_UPI_ID", "")
+    if not upi_id:
+        return None
+    payee = getattr(settings, "PAYMENT_UPI_PAYEE_NAME", "")
+    is_sample = bool(getattr(settings, "PAYMENT_UPI_IS_SAMPLE", False))
+    order_number = payment.order.order_number
+    amount = f"{payment.amount_due:.2f}"
+    params = {"pa": upi_id}
+    if payee:
+        params["pn"] = payee
+    params.update({"am": amount, "cu": payment.currency, "tn": order_number})
+    note = (
+        f"Pay exactly ₹{amount} by UPI and write {order_number} in the payment note. "
+        "Then upload a screenshot of the successful payment so we can verify it."
+    )
+    if is_sample:
+        note = "These are sample payment details for local development. Do not send money. " + note
+    return {
+        "upi_id": upi_id,
+        "payee_name": payee,
+        "amount": amount,
+        "currency": payment.currency,
+        "upi_uri": "upi://pay?" + urlencode(params, quote_via=quote, safe="@"),
+        "note": note,
+        "is_sample": is_sample,
+    }
+
+
 class PaymentSerializer(serializers.ModelSerializer):
+    order_number = serializers.CharField(source="order.order_number", read_only=True)
     latest_submission = serializers.SerializerMethodField()
     can_submit_evidence = serializers.SerializerMethodField()
+    instructions = serializers.SerializerMethodField()
 
     class Meta:
         model = Payment
         fields = (
             "id",
             "order",
+            "order_number",
             "method",
             "status",
             "amount_due",
@@ -41,6 +85,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             "verified_at",
             "latest_submission",
             "can_submit_evidence",
+            "instructions",
         )
         read_only_fields = fields
 
@@ -52,6 +97,10 @@ class PaymentSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField())
     def get_can_submit_evidence(self, obj):
         return obj.status in {Payment.AWAITING, Payment.REJECTED}
+
+    @extend_schema_field(PaymentInstructionsSerializer(allow_null=True))
+    def get_instructions(self, obj):
+        return payment_instructions(obj)
 
 
 class EvidenceUploadSerializer(serializers.Serializer):

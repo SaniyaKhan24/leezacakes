@@ -3,12 +3,15 @@ from urllib.parse import urlsplit
 
 from django.core.exceptions import ImproperlyConfigured
 
+from apps.common.crypto import validate_key as validate_encryption_key
 from config.environment import config, required
 
 from .base import *  # noqa: F403
 from .base import ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS
 
 DEBUG = False
+if config("DEV_USE_SQLITE", default=False, cast=bool):
+    raise ImproperlyConfigured("DEV_USE_SQLITE is development-only; production uses PostgreSQL.")
 SECRET_KEY = required("DJANGO_SECRET_KEY")
 if len(SECRET_KEY) < 50 or len(set(SECRET_KEY)) < 5 or SECRET_KEY.startswith("django-insecure-"):
     raise ImproperlyConfigured(
@@ -36,6 +39,18 @@ for name, origins in (
             or parsed.username
         ):
             raise ImproperlyConfigured(f"{name} requires explicit HTTPS origins without paths.")
+FRONTEND_URL = required("FRONTEND_URL").rstrip("/")
+_frontend = urlsplit(FRONTEND_URL)
+if _frontend.scheme != "https" or not _frontend.hostname or _frontend.query or _frontend.fragment:
+    raise ImproperlyConfigured("FRONTEND_URL must be an explicit HTTPS URL for email links.")
+# Encrypts provider secrets saved in admin; losing it means re-entering them.
+FIELD_ENCRYPTION_KEY = required("FIELD_ENCRYPTION_KEY")
+validate_encryption_key(FIELD_ENCRYPTION_KEY)
+BACKEND_PUBLIC_URL = config("BACKEND_PUBLIC_URL", default="").strip().rstrip("/")
+if BACKEND_PUBLIC_URL:
+    _backend = urlsplit(BACKEND_PUBLIC_URL)
+    if _backend.scheme != "https" or not _backend.hostname or _backend.query:
+        raise ImproperlyConfigured("BACKEND_PUBLIC_URL must be an explicit HTTPS URL.")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = True

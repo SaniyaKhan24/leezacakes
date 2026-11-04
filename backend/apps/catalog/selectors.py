@@ -1,3 +1,5 @@
+from django.db.models import Prefetch
+
 from .models import Category, Product, ProductVariant
 
 
@@ -11,7 +13,10 @@ def public_products():
             status=Product.PUBLISHED, is_available=True, category__is_active=True
         )
         .select_related("category")
-        .prefetch_related("images", "variants")
+        .prefetch_related(
+            "images",
+            Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True)),
+        )
     )
 
 

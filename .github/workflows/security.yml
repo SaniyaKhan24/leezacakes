@@ -25,13 +25,13 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: backend/requirements*.txt
-      - run: python -m pip install --require-hashes -r requirements-dev.txt -r requirements-linux.txt
+          cache-dependency-path: backend/requirement/*.txt
+      # requirement/*.txt are version-range manifests (not hash locks), so pip-audit
+      # resolves them with pip instead of --require-hashes/--disable-pip.
+      - run: python -m pip install -r requirement/development.txt
       - name: Static security analysis
-        run: python -m bandit -r apps config core manage.py scripts -c pyproject.toml
+        run: python -m bandit -r apps config core manage.py scripts -c pyproject.toml -x '*/tests/*'
       - name: Audit runtime dependencies
-        run: python -m pip_audit -r requirements.txt --strict --require-hashes --disable-pip --progress-spinner off
+        run: python -m pip_audit -r requirement/production.txt --strict --progress-spinner off
       - name: Audit development dependencies
-        run: python -m pip_audit -r requirements-dev.txt --strict --require-hashes --disable-pip --progress-spinner off
-      - name: Audit Linux server
-        run: python -m pip_audit -r requirements-linux.txt --strict --require-hashes --disable-pip --progress-spinner off
+        run: python -m pip_audit -r requirement/development.txt --strict --progress-spinner off

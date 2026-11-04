@@ -15,7 +15,9 @@ restrict direct backend access, then enable TRUST_PROXY_SSL_HEADER=True. Otherwi
 leave it False. Verify redirects, host rejection and secure cookies end-to-end
 before enabling traffic. Health probes must use HTTPS through the trusted ingress.
 
-Install hash-locked runtime requirements plus requirements-linux.txt.
+Install runtime requirements with `pip install -r requirement/production.txt` and set
+FRONTEND_URL (https), ORDER_TAX_RATE / ORDER_PRICES_INCLUDE_TAX, PAYMENT_UPI_* and
+SITE_* explicitly; see .env.example.
 Run manage.py check --deploy --fail-level WARNING with real production settings
 in the deployment environment. Synthetic checks prove settings behavior, not
 DNS, certificates, ingress or database reachability.
@@ -36,6 +38,19 @@ the reverse proxy or object storage. Never serve production media through Django
 choose storage, backup, access controls and upload validation first.
 Start Linux WSGI with gunicorn config.wsgi:application after configuring the
 environment. Choose worker count/timeouts from load tests, not a guessed value.
+
+Set `FIELD_ENCRYPTION_KEY` (a Fernet key; production refuses to start without it). It
+encrypts the WhatsApp access token and app secret that the shop owner saves in Django
+admin. Store it with the other secrets and keep it stable; see `.env.example` for how
+to generate and rotate it. WhatsApp itself is configured in admin, not the environment,
+and its webhook needs `BACKEND_PUBLIC_URL` to be the public HTTPS origin.
+
+Run the notification worker as a second long-lived process with the same environment:
+`python manage.py run_notification_worker` (for example a second systemd unit, a
+`worker:` line in a Procfile, or a second container from the same image). Without it,
+order and payment emails/WhatsApp messages stay queued in `DeliveryAttempt`; in-app
+notifications are unaffected. It stops cleanly on SIGTERM after the current batch, and
+several workers can run at once on PostgreSQL.
 
 Liveness only reports process status. Add protected/internal readiness checks
 with bounded DB/cache probes when deployment infrastructure is known; never

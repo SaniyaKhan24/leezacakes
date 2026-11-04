@@ -1,5 +1,6 @@
 """Verification profiles never read local credentials."""
 
+import base64
 import os
 import secrets
 from pathlib import Path
@@ -18,12 +19,14 @@ config = Config(
         "DJANGO_ALLOWED_HOSTS": "testserver,api.example.invalid",
         "CORS_ALLOWED_ORIGINS": "https://frontend.example.invalid",
         "CSRF_TRUSTED_ORIGINS": "https://frontend.example.invalid",
+        "FRONTEND_URL": "https://frontend.example.invalid",
         "HSTS_INCLUDE_SUBDOMAINS": "True",
         "HSTS_PRELOAD": "True",
         "DB_NAME": "unused",
         "DB_USER": "unused",
         "DB_PASSWORD": secrets.token_urlsafe(32),
         "DB_HOST": "localhost",
+        "FIELD_ENCRYPTION_KEY": base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
     }
     if VERIFY
     else RepositoryEnv(str(BASE_DIR / ".env"))

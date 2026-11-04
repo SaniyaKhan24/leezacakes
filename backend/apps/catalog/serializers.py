@@ -24,7 +24,10 @@ class ProductImageSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "url", "created_at")
 
     def get_url(self, obj) -> str | None:
-        return obj.image.url if obj.image else None
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -62,7 +65,7 @@ class ProductPublicSerializer(serializers.ModelSerializer):
 
     def get_primary_image(self, obj) -> dict | None:
         image = next((item for item in obj.images.all() if item.is_primary), None)
-        return ProductImageSerializer(image).data if image else None
+        return ProductImageSerializer(image, context=self.context).data if image else None
 
 
 class ProductAdminSerializer(serializers.ModelSerializer):

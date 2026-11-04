@@ -1,7 +1,9 @@
+import os
 import uuid
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -10,13 +12,28 @@ def private_evidence_path(instance, filename):
     return f"payment-evidence/{instance.payment_id}/{uuid.uuid4().hex}.bin"
 
 
-def private_evidence_storage():
-    from django.core.files.storage import FileSystemStorage
+class PrivateEvidenceStorage(FileSystemStorage):
+    """Filesystem storage whose root follows PAYMENT_EVIDENCE_STORAGE_ROOT at access time.
 
-    root = getattr(settings, "PAYMENT_EVIDENCE_STORAGE_ROOT", "")
-    if not root:
-        root = str(settings.BASE_DIR / "private_payment_evidence")
-    return FileSystemStorage(location=root, base_url="")
+    Django evaluates a callable ``storage`` once at import, so the location is resolved
+    lazily here to honour settings overrides (tests use a temporary directory).
+    """
+
+    def __init__(self):
+        super().__init__(base_url="")
+
+    @property
+    def base_location(self):
+        root = getattr(settings, "PAYMENT_EVIDENCE_STORAGE_ROOT", "")
+        return root or str(settings.BASE_DIR / "private_payment_evidence")
+
+    @property
+    def location(self):
+        return os.path.abspath(self.base_location)
+
+
+def private_evidence_storage():
+    return PrivateEvidenceStorage()
 
 
 class Payment(models.Model):

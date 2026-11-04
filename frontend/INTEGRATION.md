@@ -1,28 +1,20 @@
-# Leeza Cakes frontend integration
+# Leeza Cakes frontend ↔ backend integration
 
-## Implemented against the existing backend
+All requests go to the storefront's own origin and are proxied to Django (`next.config.ts` rewrites). Image URLs that Django returns as absolute `/media/...` links are rewritten to the proxied path by `mediaUrl()`.
 
-- Catalogue: public categories, products, variants, images, featured products, and documented search filters.
-- Customization: product options and choices, selection validation, and cart selection submission.
-- Accounts: register, login, logout, access-token refresh, profile context, saved-address reads, and guest-cart merge after login.
-- Cart: guest/authenticated retrieval, add, quantity update, removal, server price confirmation, and checkout validation.
-- Orders: authenticated creation with an `Idempotency-Key`, order detail, and order history.
-- Payments: payment lookup by order and the implemented image-evidence submission workflow.
+| Journey step | Endpoints |
+| --- | --- |
+| Catalogue | `GET /api/v1/catalog/products/`, `/products/<slug>/`, `/categories/` |
+| Customisation | `GET /api/v1/customization/products/<slug>/options/` — selections are sent with **global** option and choice ids (`option.option.id`, `choice.choice`) |
+| Cart (guest or signed in) | `GET/POST /api/v1/cart/…`, `POST /api/v1/cart/merge/` after sign-in, `POST /cart/confirm-prices/` |
+| Accounts | register, email verification (`/auth/verify?uid=&token=`), login/refresh/logout, password reset (`/auth/reset?uid=&token=`), `me`, addresses |
+| Pickup slots | `GET /api/v1/orders/pickup-slots/` (lead time from the cart's longest preparation time) |
+| Orders | `POST /api/v1/orders/` with `Idempotency-Key`, `GET /api/v1/orders/`, `/orders/<id>/` |
+| Payment | `GET /api/v1/payments/orders/<order_id>/` (includes UPI `instructions`), `POST /api/v1/payments/<id>/submissions/` (PNG/JPEG/WebP ≤ 5 MB) |
+| Site & enquiries | `GET /api/v1/site/`, `POST /api/v1/enquiries/` |
 
-## Backend boundaries surfaced in the UI
+## Deliberate boundaries
 
-- The order contract accepts a pickup slot, not a delivery address. Saved addresses are displayed on the account page, but are not sent into checkout because the API does not accept them.
-- The payments app does not expose a customer-facing gateway initiation, redirect, cancellation, or client-side status-verification endpoint. The order page uses the implemented payment-status and evidence-review endpoints and explains that limitation.
-- No backend product seed or contact/social configuration was found. `NEXT_PUBLIC_ENABLE_DEMO_CATALOG=true` enables presentation-only cake cards; demo IDs and prices are never sent to cart/order APIs.
-
-## Development journey checklist
-
-- Browse/search/category/sort: implemented; live verification requires the Django API and catalogue data.
-- Product details/customization: implemented against live product and customization endpoints.
-- Guest cart and quantity/removal: implemented against live cart endpoints.
-- Register/login/cart merge: implemented; tokens remain in memory and are not written to local storage.
-- Address reads/account/order history: implemented; address create/edit UI remains absent because checkout does not consume addresses yet.
-- Checkout/order creation: implemented with server validation and an idempotency key.
-- Payment: implemented only to the extent exposed by the backend; no hosted gateway was invented.
-
-Required environment variables are in `.env.example`.
+- **Pickup only.** The order contract takes a pickup slot, not a delivery address. Saved addresses can be managed in the account but are not used at checkout yet.
+- **No payment gateway.** Customers pay by UPI and upload proof; staff verify it in Django admin, which confirms the order. Sample UPI details in development are clearly flagged as samples.
+- **Sample content.** Contact details from `/api/v1/site/` are flagged `is_sample` in development and the UI labels them as such. Production returns `null` for anything not configured.
