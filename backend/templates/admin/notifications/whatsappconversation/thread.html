@@ -1,0 +1,76 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .lz-thread { max-width: 760px; display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; }
+  .lz-msg { max-width: 75%; padding: 8px 12px; border-radius: 10px; white-space: pre-wrap;
+    border: 1px solid var(--hairline-color, #e8e8e8); background: var(--body-bg, #fff); }
+  .lz-msg.lz-out { align-self: flex-end; background: var(--selected-bg, #e4f2fd); }
+  .lz-msg small { display: block; margin-top: 4px; color: var(--body-quiet-color, #666); white-space: normal; }
+  .lz-msg .lz-failed { color: var(--error-fg, #ba2121); }
+  .lz-meta { margin: 0 0 16px; color: var(--body-quiet-color, #666); }
+  .lz-box { max-width: 760px; padding: 12px 16px; margin: 0 0 16px; border-radius: 8px;
+    border: 1px solid var(--hairline-color, #e8e8e8); background: var(--darkened-bg, #f8f8f8); }
+  .lz-box textarea { width: 100%; box-sizing: border-box; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {{ conversation.display_name }}
+</div>
+{% endblock %}
+
+{% block content %}
+<p class="lz-meta">
+  {{ number }}
+  {% if conversation.user %} · account {{ conversation.user.email }}{% endif %}
+  {% if conversation.order %} · latest order <a href="{% url 'admin:orders_order_change' conversation.order.pk %}">{{ conversation.order.order_number }}</a>{% endif %}
+</p>
+
+<div class="lz-thread" role="log" aria-label="Messages">
+  {% for message in thread %}
+  <div class="lz-msg{% if message.direction == 'outbound' %} lz-out{% endif %}">{{ message.body|default:"(empty)" }}
+    <small>
+      {% if message.direction == 'outbound' %}Studio{% if message.sent_by %} ({{ message.sent_by.email }}){% endif %}{% else %}{{ message.contact_name|default:conversation.display_name }}{% endif %}
+      · {{ message.timestamp|date:"d M Y, H:i" }}
+      {% if message.message_type != 'text' %} · {{ message.message_type }}{% endif %}
+      {% if message.status %} · <span{% if message.status == 'failed' %} class="lz-failed"{% endif %}>{{ message.status }}</span>{% endif %}
+      {% if message.error_message %} · <span class="lz-failed">{{ message.error_message }}</span>{% endif %}
+    </small>
+  </div>
+  {% empty %}
+  <p>No messages yet.</p>
+  {% endfor %}
+</div>
+
+{% if can_reply %}
+  {% if window_open %}
+  <form class="lz-box" method="post" action="{% url 'admin:notifications_whatsappconversation_reply' conversation.pk %}">{% csrf_token %}
+    <label for="id_text"><strong>Reply</strong> (free-form replies are allowed until {{ window_closes_at|date:"d M Y, H:i" }})</label>
+    {{ reply_form.text }}
+    <p><button type="submit" class="button default">Send reply</button></p>
+  </form>
+  {% else %}
+  <div class="lz-box">
+    <p><strong>Free-form replies are closed.</strong>
+    {% if window_closes_at %}WhatsApp allows them only within 24 hours of the customer's last message (closed {{ window_closes_at|date:"d M Y, H:i" }}).{% else %}The customer has not messaged you yet, so only approved templates can be sent.{% endif %}</p>
+    {% if templates and conversation.order %}
+    <form method="post" action="{% url 'admin:notifications_whatsappconversation_send_template' conversation.pk %}">{% csrf_token %}
+      <label for="lz-template">Send an approved template about order {{ conversation.order.order_number }}:</label>
+      <select id="lz-template" name="event_key">
+        {% for key, name in templates %}<option value="{{ key }}">{{ name }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="button">Send template</button>
+    </form>
+    {% elif not conversation.order %}
+    <p>No order is linked to this number, so order templates cannot be filled in.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

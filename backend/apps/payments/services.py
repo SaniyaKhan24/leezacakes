@@ -23,7 +23,7 @@ def create_payment_for_order(order):
 
 @transaction.atomic
 def submit_evidence(payment, user, evidence):
-    payment = Payment.objects.select_for_update().get(pk=payment.pk)
+    payment = Payment.objects.select_for_update().select_related("order").get(pk=payment.pk)
     if payment.user_id != user.id:
         raise ValidationError({"payment": "Payment was not found."})
     if payment.status == Payment.VERIFIED:
@@ -50,6 +50,22 @@ def submit_evidence(payment, user, evidence):
             to_status=Payment.PENDING,
             related_submission=submission,
         )
+    from apps.notifications.services import emit_event, emit_staff_event, order_payload
+
+    payload = order_payload(
+        payment.order, payment_id=str(payment.pk), submission_id=str(submission.pk)
+    )
+    emit_event(
+        "payment_submitted",
+        user=payment.user,
+        payload=payload,
+        deduplication_key=f"submission:{submission.id}:payment_submitted",
+    )
+    emit_staff_event(
+        "staff_payment_submitted",
+        payload=payload,
+        deduplication_key=f"submission:{submission.id}:staff_payment_submitted",
+    )
     return submission
 
 
@@ -80,12 +96,17 @@ def review_submission(payment, submission, reviewer, decision, reason=""):
             related_submission=submission,
             reason=reason,
         )
-        from apps.notifications.services import emit_event
+        from apps.notifications.services import emit_event, order_payload
 
         emit_event(
             "payment_rejected",
             user=payment.user,
-            payload={"order_number": payment.order.order_number},
+            payload=order_payload(
+                payment.order,
+                payment_id=str(payment.pk),
+                submission_id=str(submission.pk),
+                reason=reason,
+            ),
             deduplication_key=f"submission:{submission.id}:payment_rejected",
         )
     return submission
@@ -126,12 +147,12 @@ def verify_payment(payment, submission, reviewer, verified_amount, reason=""):
     order.payment_status = Order.PAYMENT_VERIFIED
     order.save(update_fields=("payment_status", "updated_at"))
     transition_order(order, Order.CONFIRMED, actor=reviewer, reason="Payment manually verified.")
-    from apps.notifications.services import emit_event
+    from apps.notifications.services import emit_event, order_payload
 
     emit_event(
         "payment_verified",
         user=order.user,
-        payload={"order_number": order.order_number},
+        payload=order_payload(order, payment_id=str(payment.pk)),
         deduplication_key=f"payment:{payment.id}:payment_verified",
     )
     return payment

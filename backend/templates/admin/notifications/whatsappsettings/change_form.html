@@ -1,0 +1,44 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .lz-ops { margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--hairline-color, #e8e8e8);
+    border-left: 4px solid #c2410c; border-radius: 8px; background: var(--darkened-bg, #f8f8f8); }
+  .lz-ops h2 { margin: 0 0 4px; font-size: 1rem; color: var(--body-fg, #333); background: none; padding: 0; }
+  .lz-ops p { margin: 0 0 10px; color: var(--body-quiet-color, #666); }
+  .lz-ops-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .lz-ops form { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
+  .lz-ops .lz-test { margin-top: 10px; }
+  .lz-ops input[type=text] { width: 13em; }
+</style>
+{% endblock %}
+
+{% block object-tools %}
+{{ block.super }}
+{% if can_operate and change %}
+<section class="lz-ops" aria-labelledby="lz-ops-title">
+  <h2 id="lz-ops-title">Leeza Cakes Studio · WhatsApp tools</h2>
+  <p>Uses the saved settings: save your changes first. Results appear at the top of the page.</p>
+  <div class="lz-ops-row">
+    <form method="post" action="{% url 'admin:notifications_whatsappsettings_check' %}">{% csrf_token %}
+      <button type="submit" class="button">Check connection</button>
+    </form>
+    <form method="post" action="{% url 'admin:notifications_whatsappsettings_sync' %}">{% csrf_token %}
+      <button type="submit" class="button">Sync template status</button>
+    </form>
+    <form method="post" action="{% url 'admin:notifications_whatsappsettings_submit' %}">{% csrf_token %}
+      <button type="submit" class="button">Submit missing templates</button>
+    </form>
+  </div>
+  <form class="lz-test" method="post" action="{% url 'admin:notifications_whatsappsettings_send_test' %}">{% csrf_token %}
+    <label for="lz-test-number">Send test message to</label>
+    <input id="lz-test-number" type="text" name="test_number" placeholder="+91 98765 43210" required>
+    <label for="lz-test-event">using</label>
+    <select id="lz-test-event" name="test_event">
+      {% for key, name in test_events %}<option value="{{ key }}">{{ name }} ({{ key }})</option>{% endfor %}
+    </select>
+    <button type="submit" class="button">Send test</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

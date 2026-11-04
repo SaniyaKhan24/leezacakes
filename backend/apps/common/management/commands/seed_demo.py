@@ -17,6 +17,7 @@ from apps.cart.services.cart_service import add_item
 from apps.catalog.management.commands.seed_demo_catalog import DEFAULT_ASSETS_DIR
 from apps.catalog.models import Product
 from apps.customization.models import ProductCustomization
+from apps.notifications.models import Notification, WhatsAppSettings
 from apps.orders.models import Order, OrderStatusHistory
 from apps.orders.services.checkout import create_order
 from apps.orders.services.pickup import PickupConfig, cart_lead_time, first_available_slot
@@ -49,6 +50,8 @@ SAMPLE_ADDRESS = {
     "postal_code": "560038",
     "country_code": "IN",
 }
+
+SAMPLE_WHATSAPP = "+91 90000 00000"
 
 
 def sample_proof_image(order_number, amount):
@@ -118,6 +121,7 @@ class Command(BaseCommand):
             )
             return
         customer, staff = self.seed_users()
+        self.seed_whatsapp()
         self.seed_orders(customer, staff, reset=options["reset_orders"])
         self.stdout.write(
             self.style.SUCCESS(
@@ -149,6 +153,15 @@ class Command(BaseCommand):
         if not customer.addresses.exists():
             create_address(customer, is_default=True, **SAMPLE_ADDRESS)
         return customer, staff
+
+    def seed_whatsapp(self):
+        """Sample storefront chat number (edited in admin: WhatsApp & alert settings)."""
+        config = WhatsAppSettings.load()
+        if not config.business_number:
+            config = WhatsAppSettings.objects.get(pk=config.pk)
+            config.business_number = SAMPLE_WHATSAPP
+            config.save(update_fields=("business_number", "updated_at"))
+            self.stdout.write(f"Set the sample WhatsApp chat number {SAMPLE_WHATSAPP}.")
 
     # Orders ---------------------------------------------------------------------------------
 
@@ -328,6 +341,12 @@ class Command(BaseCommand):
         PaymentStatusHistory.objects.filter(payment__order=order).update(
             created_at=F("created_at") + delta
         )
+        notifications = Notification.objects.filter(payload__order_id=str(order.pk))
+        notifications.update(created_at=F("created_at") + delta)
+        if "order_number" in fields:
+            for notification in notifications:
+                notification.payload["order_number"] = fields["order_number"]
+                notification.save(update_fields=("payload",))
 
     @transaction.atomic
     def retime(self, order, moments):
@@ -346,6 +365,9 @@ class Command(BaseCommand):
     @transaction.atomic
     def delete_orders(self, orders):
         count = orders.count()
+        Notification.objects.filter(
+            payload__order_id__in=[str(pk) for pk in orders.values_list("pk", flat=True)]
+        ).delete()
         PaymentStatusHistory.objects.filter(payment__order__in=orders).delete()
         for submission in PaymentSubmission.objects.filter(payment__order__in=orders):
             submission.evidence_file.delete(save=False)

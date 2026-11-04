@@ -3,6 +3,7 @@ from urllib.parse import urlsplit
 
 from django.core.exceptions import ImproperlyConfigured
 
+from apps.common.crypto import validate_key as validate_encryption_key
 from config.environment import config, required
 
 from .base import *  # noqa: F403
@@ -42,6 +43,14 @@ FRONTEND_URL = required("FRONTEND_URL").rstrip("/")
 _frontend = urlsplit(FRONTEND_URL)
 if _frontend.scheme != "https" or not _frontend.hostname or _frontend.query or _frontend.fragment:
     raise ImproperlyConfigured("FRONTEND_URL must be an explicit HTTPS URL for email links.")
+# Encrypts provider secrets saved in admin; losing it means re-entering them.
+FIELD_ENCRYPTION_KEY = required("FIELD_ENCRYPTION_KEY")
+validate_encryption_key(FIELD_ENCRYPTION_KEY)
+BACKEND_PUBLIC_URL = config("BACKEND_PUBLIC_URL", default="").strip().rstrip("/")
+if BACKEND_PUBLIC_URL:
+    _backend = urlsplit(BACKEND_PUBLIC_URL)
+    if _backend.scheme != "https" or not _backend.hostname or _backend.query:
+        raise ImproperlyConfigured("BACKEND_PUBLIC_URL must be an explicit HTTPS URL.")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = True

@@ -134,15 +134,21 @@ def create_order(user, checkout_data, idempotency_key):
                 price_adjustment=selection.price_adjustment,
             )
     OrderStatusHistory.objects.create(order=order, to_status=Order.PENDING_PAYMENT)
-    from apps.notifications.services import emit_event
+    from apps.notifications.services import emit_event, emit_staff_event, order_payload
     from apps.payments.services import create_payment_for_order
 
     create_payment_for_order(order)
+    payload = order_payload(order)
     emit_event(
         "order_created",
         user=user,
-        payload={"order_number": order.order_number},
+        payload=payload,
         deduplication_key=f"order:{order.id}:order_created",
+    )
+    emit_staff_event(
+        "staff_order_created",
+        payload=payload,
+        deduplication_key=f"order:{order.id}:staff_order_created",
     )
     cart.status = Cart.CONVERTED
     cart.save(update_fields=("status", "updated_at"))

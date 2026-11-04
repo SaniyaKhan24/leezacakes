@@ -160,9 +160,40 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 API_DOCS_ENABLED = config("API_DOCS_ENABLED", default=False, cast=bool)
-WHATSAPP_PROVIDER_ENABLED = config("WHATSAPP_PROVIDER_ENABLED", default=False, cast=bool)
 SMS_PROVIDER_ENABLED = config("SMS_PROVIDER_ENABLED", default=False, cast=bool)
+
+# --- Notifications --------------------------------------------------------------------
+# Email goes through Django's EMAIL_BACKEND; nothing is sent until this is True.
 EMAIL_PROVIDER_ENABLED = config("EMAIL_PROVIDER_ENABLED", default=False, cast=bool)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Leeza Cakes <orders@localhost>")
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = config("EMAIL_HOST", default="localhost")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=10, cast=int)
+# Public origin of this backend, used for Django admin links in staff alerts.
+BACKEND_PUBLIC_URL = config("BACKEND_PUBLIC_URL", default="").strip().rstrip("/")
+# Background delivery (apps/notifications/worker.py, `manage.py run_notification_worker`).
+NOTIFICATION_MAX_ATTEMPTS = config("NOTIFICATION_MAX_ATTEMPTS", default=5, cast=int)
+NOTIFICATION_RETRY_DELAYS = [
+    int(value) for value in csv("NOTIFICATION_RETRY_DELAYS", "60,300,1800,7200")
+]
+NOTIFICATION_LEASE_SECONDS = config("NOTIFICATION_LEASE_SECONDS", default=120, cast=int)
+NOTIFICATION_WORKER_INTERVAL = config("NOTIFICATION_WORKER_INTERVAL", default=2.0, cast=float)
+NOTIFICATION_WORKER_BATCH_SIZE = config("NOTIFICATION_WORKER_BATCH_SIZE", default=20, cast=int)
+if NOTIFICATION_MAX_ATTEMPTS < 1 or not NOTIFICATION_RETRY_DELAYS:
+    raise ImproperlyConfigured(
+        "NOTIFICATION_MAX_ATTEMPTS must be at least 1 and NOTIFICATION_RETRY_DELAYS non-empty."
+    )
+if NOTIFICATION_LEASE_SECONDS < 30:
+    raise ImproperlyConfigured("NOTIFICATION_LEASE_SECONDS must be at least 30.")
+# WhatsApp (Meta Cloud API) settings, staff alert recipients and the storefront chat
+# number are edited in Django admin (apps.notifications.WhatsAppSettings), not here.
+# Secrets stored there are encrypted with FIELD_ENCRYPTION_KEY (comma-separated Fernet
+# keys; the first one encrypts). Development and tests derive a fixed local key.
+FIELD_ENCRYPTION_KEY = config("FIELD_ENCRYPTION_KEY", default="").strip()
 PAYMENT_EVIDENCE_STORAGE_ROOT = config("PAYMENT_EVIDENCE_STORAGE_ROOT", default="")
 PAYMENT_EVIDENCE_MAX_SIZE = config("PAYMENT_EVIDENCE_MAX_SIZE", default=5 * 1024 * 1024, cast=int)
 
@@ -210,7 +241,6 @@ def _optional(name):
 SITE_BUSINESS_NAME = config("SITE_BUSINESS_NAME", default="Leeza Cakes").strip() or None
 SITE_CONTACT_PHONE = _optional("SITE_CONTACT_PHONE")
 SITE_CONTACT_EMAIL = _optional("SITE_CONTACT_EMAIL")
-SITE_WHATSAPP = _optional("SITE_WHATSAPP")
 SITE_INSTAGRAM = _optional("SITE_INSTAGRAM")
 SITE_ADDRESS = _optional("SITE_ADDRESS")
 SITE_PICKUP_HOURS_LABEL = _optional("SITE_PICKUP_HOURS_LABEL")

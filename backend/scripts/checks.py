@@ -27,10 +27,27 @@ def main():
     # Remove ambient application configuration; fixture settings never load .env.
     for name in list(env):
         if name.startswith(
-            ("DJANGO_", "DB_", "CORS_", "CSRF_", "DEV_", "ORDER_", "PAYMENT_", "PICKUP_", "SITE_")
+            (
+                "DJANGO_",
+                "DB_",
+                "CORS_",
+                "CSRF_",
+                "DEV_",
+                "ORDER_",
+                "PAYMENT_",
+                "PICKUP_",
+                "SITE_",
+                "WHATSAPP_",
+                "STAFF_",
+                "EMAIL_",
+                "SMS_",
+            )
         ) or name in {
             "API_DOCS_ENABLED",
             "FRONTEND_URL",
+            "BACKEND_PUBLIC_URL",
+            "DEFAULT_FROM_EMAIL",
+            "FIELD_ENCRYPTION_KEY",
             "TRUST_PROXY_SSL_HEADER",
             "HSTS_INCLUDE_SUBDOMAINS",
             "HSTS_PRELOAD",

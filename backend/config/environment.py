@@ -1,5 +1,6 @@
 """Verification profiles never read local credentials."""
 
+import base64
 import os
 import secrets
 from pathlib import Path
@@ -25,6 +26,7 @@ config = Config(
         "DB_USER": "unused",
         "DB_PASSWORD": secrets.token_urlsafe(32),
         "DB_HOST": "localhost",
+        "FIELD_ENCRYPTION_KEY": base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
     }
     if VERIFY
     else RepositoryEnv(str(BASE_DIR / ".env"))

@@ -3,7 +3,7 @@
 **Project:** Leeza Cakes  
 **Backend:** Django + Django REST Framework  
 **Document:** `backend/docs/apps/notifications_structure.md`  
-**Status:** Architecture specification; implementation and provider configuration pending
+**Status:** Architecture specification. Implemented so far: in-app inbox (customer and staff), Django admin live alerts, email through Django's email backend and WhatsApp through the Meta WhatsApp Cloud API; see the "Notifications & WhatsApp" section of `backend/README.md` for what runs today. SMS and Celery are not implemented yet.
 
 ---
 
@@ -29,14 +29,14 @@ The app does **not** own order processing, payment verification, account authent
 | Area | Decision |
 |---|---|
 | Customer launch channels | WhatsApp and SMS |
-| Email delivery | Undecided; provider and activation pending |
-| WhatsApp integration | Undecided; implementation provider and credentials pending |
+| Email delivery | Implemented via Django's email backend (SMTP settings); enabled with `EMAIL_PROVIDER_ENABLED` |
+| WhatsApp integration | Meta WhatsApp Cloud API template messages (`apps/notifications/channels/whatsapp.py`), behind a provider interface; enabled with `WHATSAPP_PROVIDER_ENABLED` |
 | SMS integration | No third-party vendor selected; investigate a direct provider integration |
 | Customer order/payment events | Seven specified events; see Section 5 |
 | Staff alerts | Both WhatsApp and email, subject to configuration |
 | Transactional notifications | Mandatory; customers cannot disable essential transactional messages through notification preferences |
 | Marketing notifications | Supported, including offers; separate consent and opt-out rules required |
-| Delivery architecture | Celery asynchronous tasks |
+| Delivery architecture | Durable database outbox (`DeliveryAttempt` rows written in the order's transaction) drained by `manage.py run_notification_worker` with leased claims, SKIP LOCKED and bounded backoff retries; no broker needed |
 | Delivery history | Minimal operational history |
 | Checkout and fulfillment | Authenticated orders, UPI QR payment, manual payment review, takeaway/pickup only |
 | Migrations | Not authorized by this document |

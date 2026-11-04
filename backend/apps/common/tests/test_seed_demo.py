@@ -1,3 +1,4 @@
+import uuid
 from io import StringIO
 
 import pytest
@@ -10,6 +11,7 @@ from apps.accounts.models import User
 from apps.cart.models import Cart, CartItem
 from apps.catalog.models import Category, Product, ProductImage, ProductVariant
 from apps.customization.models import ProductCustomization, ProductCustomizationChoice
+from apps.notifications.models import Notification, WhatsAppSettings
 from apps.orders.models import Order
 from apps.payments.models import Payment, PaymentSubmission
 
@@ -181,3 +183,21 @@ def test_full_demo_seed_creates_accounts_and_orders(assets):
     assert "Deleted 4 existing demo order(s)" in reset
     assert Order.objects.filter(user=customer).count() == 4
     assert Payment.objects.filter(user=customer).count() == 4
+
+    # Sample orders notify like real ones, and stay consistent after re-dating and reset.
+    order_numbers = dict(Order.objects.values_list("pk", "order_number"))
+    notifications = Notification.objects.all()
+    assert notifications.filter(user=customer, event_key="order_created").count() == 4
+    assert notifications.filter(user=staff, event_key="staff_order_created").count() == 4
+    for notification in notifications:
+        order_id = uuid.UUID(notification.payload["order_id"])
+        assert notification.payload["order_number"] == order_numbers[order_id]
+
+    # The storefront chat number is a sample, set once and then left to the admin.
+    whatsapp = WhatsAppSettings.load()
+    assert whatsapp.business_number == "+91 90000 00000"
+    assert whatsapp.business_number_digits == "919000000000"
+    WhatsAppSettings.objects.filter(pk=1).update(business_number="+91 98765 43210")
+    WhatsAppSettings.invalidate()
+    run("seed_demo", assets_dir=str(assets))
+    assert WhatsAppSettings.load().business_number == "+91 98765 43210"

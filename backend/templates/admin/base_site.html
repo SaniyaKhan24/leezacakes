@@ -1,0 +1,329 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+{% if user.is_active and user.is_staff %}
+<style>
+  .lz-alerts { position: relative; display: inline-block; }
+  .lz-badge {
+    display: inline-block; min-width: 1.5em; margin-left: 4px; padding: 0 5px;
+    border-radius: 999px; background: #c2410c; color: #fff; font-size: 0.75em;
+    font-weight: 700; line-height: 1.6em; text-align: center; vertical-align: 1px;
+  }
+  .lz-badge[hidden], .lz-panel[hidden], .lz-enable[hidden] { display: none; }
+  .lz-enable {
+    margin: 0 0 0 4px; padding: 0; border: 0; background: none; cursor: pointer;
+    color: var(--header-link-color, #fff); font: inherit; text-transform: inherit;
+    text-decoration: underline dotted; letter-spacing: inherit;
+  }
+  .lz-panel {
+    position: absolute; right: 0; top: calc(100% + 10px); z-index: 1001; width: 340px;
+    max-width: calc(100vw - 24px); text-align: left; text-transform: none; letter-spacing: 0;
+    background: var(--body-bg, #fff); color: var(--body-fg, #333);
+    border: 1px solid var(--hairline-color, #e8e8e8); border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); font-size: 0.8125rem; overflow: hidden;
+  }
+  .lz-panel ul { margin: 0; padding: 0; list-style: none; max-height: 60vh; overflow: auto; }
+  .lz-panel li { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--hairline-color, #eee); }
+  .lz-panel li a { display: block; padding: 10px 14px; color: inherit; text-decoration: none; }
+  .lz-panel li a:hover { background: var(--darkened-bg, #f8f8f8); }
+  .lz-panel li.lz-unread a { border-left: 3px solid #c2410c; padding-left: 11px; }
+  .lz-panel strong { display: block; color: var(--body-fg, #333); font-weight: 600; }
+  .lz-panel span, .lz-panel time { display: block; color: var(--body-quiet-color, #666); margin-top: 2px; }
+  .lz-panel .lz-empty { padding: 16px 14px; color: var(--body-quiet-color, #666); }
+  .lz-panel footer {
+    display: flex; justify-content: space-between; align-items: center; padding: 8px 14px;
+    background: var(--darkened-bg, #f8f8f8);
+  }
+  .lz-panel footer a, .lz-panel footer button {
+    color: var(--link-fg, #417893); background: none; border: 0; padding: 0; cursor: pointer;
+    font: inherit; text-decoration: none;
+  }
+  #lz-toasts {
+    position: fixed; top: 16px; right: 16px; z-index: 1002; display: flex;
+    flex-direction: column; gap: 10px; width: 340px; max-width: calc(100vw - 32px);
+  }
+  .lz-toast {
+    position: relative; display: block; padding: 12px 36px 12px 14px; border-radius: 10px;
+    background: var(--body-bg, #fff); color: var(--body-fg, #333); text-decoration: none;
+    border: 1px solid var(--hairline-color, #e8e8e8); border-left: 4px solid #c2410c;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2); font-size: 0.8125rem;
+    animation: lz-in 220ms ease-out;
+  }
+  .lz-toast:hover { text-decoration: none; }
+  .lz-toast strong { display: block; font-weight: 600; margin-bottom: 2px; }
+  .lz-toast span { display: block; color: var(--body-quiet-color, #666); }
+  .lz-toast button {
+    position: absolute; top: 6px; right: 8px; border: 0; background: none; cursor: pointer;
+    color: var(--body-quiet-color, #666); font-size: 18px; line-height: 1;
+  }
+  @keyframes lz-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .lz-toast { animation: none; } }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block userlinks %}
+{% if user.is_active and user.is_staff %}
+<span class="lz-alerts">
+  <a id="lz-alerts-link" href="{% url 'admin:notifications_notification_changelist' %}?audience__exact=staff" aria-haspopup="true" aria-expanded="false">Alerts<span id="lz-alerts-badge" class="lz-badge" hidden aria-live="polite">0</span></a>
+  <div id="lz-alerts-panel" class="lz-panel" role="dialog" aria-label="Latest alerts" hidden></div>
+</span>
+<button type="button" id="lz-alerts-enable" class="lz-enable" hidden>Enable desktop alerts</button> /
+{% endif %}
+{{ block.super }}
+{% endblock %}
+
+{% block extrabody %}{{ block.super }}
+{% if user.is_active and user.is_staff %}
+<div id="lz-toasts" aria-live="polite"></div>
+<div id="lz-alerts-config" hidden
+     data-count-url="{% url 'notifications:inbox-unread-count' %}"
+     data-list-url="{% url 'notifications:inbox' %}"
+     data-read-url="{% url 'notifications:inbox-read' %}"
+     data-all-url="{% url 'admin:notifications_notification_changelist' %}?audience__exact=staff"
+     data-csrf="{{ csrf_token }}"></div>
+<script>
+/* Leeza Cakes studio alerts: polls the staff inbox and announces new orders/payments. */
+(function () {
+  "use strict";
+  var cfg = document.getElementById("lz-alerts-config").dataset;
+  var POLL_MS = 15000;
+  var STORE_KEY = "leezaStudioAlertsLastSeenId";
+  var link = document.getElementById("lz-alerts-link");
+  var badge = document.getElementById("lz-alerts-badge");
+  var panel = document.getElementById("lz-alerts-panel");
+  var enable = document.getElementById("lz-alerts-enable");
+  var toasts = document.getElementById("lz-toasts");
+  var lastCount = null;
+  var memoryLastSeen = null;
+  var stopped = false;
+  var audio = null;
+
+  function request(url, options) {
+    options = options || {};
+    options.credentials = "same-origin";
+    options.headers = Object.assign({ Accept: "application/json" }, options.headers || {});
+    return fetch(url, options).then(function (response) {
+      if (response.status === 401 || response.status === 403) { stopped = true; }
+      if (!response.ok) { throw new Error("HTTP " + response.status); }
+      return response.json();
+    });
+  }
+  function markRead(body) {
+    return request(cfg.readUrl, {
+      method: "POST",
+      keepalive: true,
+      headers: { "Content-Type": "application/json", "X-CSRFToken": cfg.csrf },
+      body: JSON.stringify(body)
+    });
+  }
+  function safeLink(href) {
+    return typeof href === "string" && href.charAt(0) === "/" && href.charAt(1) !== "/"
+      ? href : cfg.allUrl;
+  }
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) { node.className = className; }
+    if (text) { node.textContent = text; }
+    return node;
+  }
+  function readLastSeen() {
+    try {
+      var value = window.localStorage.getItem(STORE_KEY);
+      return value === null ? null : (parseInt(value, 10) || 0);
+    } catch (e) { return memoryLastSeen; }
+  }
+  function writeLastSeen(id) {
+    memoryLastSeen = id;
+    try { window.localStorage.setItem(STORE_KEY, String(id)); } catch (e) { /* private mode */ }
+  }
+  function setBadge(count) {
+    badge.textContent = count > 99 ? "99+" : String(count);
+    badge.hidden = !count;
+    link.setAttribute("aria-label", count ? "Alerts, " + count + " unread" : "Alerts");
+  }
+
+  /* A soft two-note chime made with the Web Audio API (no audio files). */
+  function unlockAudio() {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) { return null; }
+    try {
+      audio = audio || new AudioCtx();
+      if (audio.state === "suspended") { audio.resume(); }
+    } catch (e) { audio = null; }
+    return audio;
+  }
+  function chime() {
+    var ctx = unlockAudio();
+    if (!ctx) { return; }
+    var now = ctx.currentTime;
+    [880, 1318.51].forEach(function (frequency, index) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      var start = now + index * 0.16;
+      osc.type = "sine";
+      osc.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.2, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.7);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.75);
+    });
+  }
+  document.addEventListener("pointerdown", unlockAudio, { once: true });
+
+  function showToast(item) {
+    var toast = el("a", "lz-toast");
+    toast.href = safeLink(item.link);
+    toast.appendChild(el("strong", "", item.title));
+    if (item.body) { toast.appendChild(el("span", "", item.body)); }
+    var close = el("button", "", "×");
+    close.type = "button";
+    close.setAttribute("aria-label", "Dismiss");
+    close.addEventListener("click", function (event) {
+      event.preventDefault();
+      toast.remove();
+    });
+    toast.appendChild(close);
+    if (item.id) {
+      toast.addEventListener("click", function () { markRead({ ids: [item.id] }).catch(function () {}); });
+    }
+    toasts.appendChild(toast);
+    window.setTimeout(function () { toast.remove(); }, 20000);
+  }
+  function desktopNotify(item) {
+    if (!("Notification" in window) || Notification.permission !== "granted") { return; }
+    try {
+      var notice = new Notification(item.title, { body: item.body || "", tag: "leeza-" + item.id });
+      notice.onclick = function () {
+        window.focus();
+        markRead({ ids: [item.id] }).catch(function () {});
+        window.location.href = safeLink(item.link);
+      };
+    } catch (e) { /* some browsers only allow notifications from a service worker */ }
+  }
+
+  function announceNew() {
+    return request(cfg.listUrl + "?audience=staff&unread=true&page_size=10").then(function (data) {
+      var items = data.results || [];
+      var maxId = items.reduce(function (max, item) { return Math.max(max, item.id); }, 0);
+      var lastSeen = readLastSeen();
+      if (lastSeen === null) { writeLastSeen(maxId); return; }
+      var fresh = items.filter(function (item) { return item.id > lastSeen; }).reverse();
+      if (!fresh.length) { return; }
+      writeLastSeen(Math.max(lastSeen, maxId));
+      fresh.slice(-3).forEach(function (item) { showToast(item); desktopNotify(item); });
+      if (fresh.length > 3) {
+        showToast({ title: (fresh.length - 3) + " more new alerts", body: "Open Alerts to see them all.", link: cfg.allUrl });
+      }
+      chime();
+    });
+  }
+
+  function poll() {
+    if (stopped) { return; }
+    request(cfg.countUrl + "?audience=staff").then(function (data) {
+      var count = data.unread_count || 0;
+      setBadge(count);
+      var changed = lastCount === null || count !== lastCount;
+      lastCount = count;
+      return changed ? announceNew() : null;
+    }).catch(function () { /* offline or signed out: try again later */ }).then(function () {
+      if (!stopped) { window.setTimeout(poll, POLL_MS); }
+    });
+  }
+
+  function renderPanel(items) {
+    panel.textContent = "";
+    if (!items.length) {
+      panel.appendChild(el("div", "lz-empty", "No alerts yet. New orders and payment screenshots appear here."));
+    } else {
+      var list = el("ul");
+      items.forEach(function (item) {
+        var row = el("li", item.read_at ? "" : "lz-unread");
+        var anchor = el("a");
+        anchor.href = safeLink(item.link);
+        anchor.appendChild(el("strong", "", item.title));
+        if (item.body) { anchor.appendChild(el("span", "", item.body)); }
+        var when = el("time", "", new Date(item.created_at).toLocaleString());
+        when.dateTime = item.created_at;
+        anchor.appendChild(when);
+        anchor.addEventListener("click", function () {
+          if (!item.read_at) { markRead({ ids: [item.id] }).catch(function () {}); }
+        });
+        row.appendChild(anchor);
+        list.appendChild(row);
+      });
+      panel.appendChild(list);
+    }
+    var footer = el("footer");
+    var all = el("a", "", "See all alerts");
+    all.href = cfg.allUrl;
+    var readAll = el("button", "", "Mark all read");
+    readAll.type = "button";
+    readAll.addEventListener("click", function () {
+      markRead({ all: true }).then(function () {
+        setBadge(0);
+        lastCount = 0;
+        openPanel();
+      }).catch(function () {});
+    });
+    footer.appendChild(all);
+    footer.appendChild(readAll);
+    panel.appendChild(footer);
+  }
+  function openPanel() {
+    panel.hidden = false;
+    link.setAttribute("aria-expanded", "true");
+    request(cfg.listUrl + "?audience=staff&page_size=8").then(function (data) {
+      renderPanel(data.results || []);
+    }).catch(function () { renderPanel([]); });
+  }
+  function closePanel() {
+    panel.hidden = true;
+    link.setAttribute("aria-expanded", "false");
+  }
+  link.addEventListener("click", function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) { return; }
+    event.preventDefault();
+    if (panel.hidden) { openPanel(); } else { closePanel(); }
+  });
+  document.addEventListener("click", function (event) {
+    if (!panel.hidden && !panel.contains(event.target) && !link.contains(event.target)) { closePanel(); }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !panel.hidden) { closePanel(); link.focus(); }
+  });
+
+  function updateEnableButton() {
+    enable.hidden = !("Notification" in window) || Notification.permission !== "default";
+  }
+  enable.addEventListener("click", function () {
+    unlockAudio();
+    Notification.requestPermission().then(function (permission) {
+      updateEnableButton();
+      if (permission === "granted") {
+        chime();
+        showToast({ title: "Desktop alerts are on", body: "You'll be notified of new orders and payment screenshots.", link: cfg.allUrl });
+      }
+    });
+  });
+  updateEnableButton();
+  poll();
+})();
+</script>
+{% endif %}
+{% endblock %}

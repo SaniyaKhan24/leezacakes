@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import secrets
 from decimal import Decimal
 
@@ -23,6 +25,15 @@ EMAIL_BACKEND = config(
     "DEV_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
 )
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000").strip().rstrip("/")
+# Order notifications are emailed too; with the console backend they are printed.
+EMAIL_PROVIDER_ENABLED = config("EMAIL_PROVIDER_ENABLED", default=True, cast=bool)
+# Local-only key for encrypted admin secrets (WhatsApp token); production requires its own.
+FIELD_ENCRYPTION_KEY = config("FIELD_ENCRYPTION_KEY", default="").strip() or (
+    base64.urlsafe_b64encode(hashlib.sha256(b"leeza-cakes-development-only").digest()).decode()
+)
+BACKEND_PUBLIC_URL = (
+    config("BACKEND_PUBLIC_URL", default="http://127.0.0.1:8000").strip().rstrip("/")
+)
 CORS_ALLOWED_ORIGINS = csv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = csv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
@@ -61,7 +72,6 @@ _site_from_env = any(
     for name in (
         "SITE_CONTACT_PHONE",
         "SITE_CONTACT_EMAIL",
-        "SITE_WHATSAPP",
         "SITE_INSTAGRAM",
         "SITE_ADDRESS",
         "SITE_PICKUP_HOURS_LABEL",
@@ -70,7 +80,6 @@ _site_from_env = any(
 if not _site_from_env:
     SITE_CONTACT_PHONE = "+91 90000 00000"
     SITE_CONTACT_EMAIL = "hello@leezacakes.example"
-    SITE_WHATSAPP = "+91 90000 00000"
     SITE_ADDRESS = "Sample Studio Address, Bengaluru"
     SITE_PICKUP_HOURS_LABEL = "Pickup daily, 10 am to 8 pm (sample hours)"
 SITE_CONTENT_IS_SAMPLE = config("SITE_CONTENT_IS_SAMPLE", default=not _site_from_env, cast=bool)

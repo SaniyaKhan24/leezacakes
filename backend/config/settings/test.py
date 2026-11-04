@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import tempfile
 from decimal import Decimal
 
@@ -9,6 +11,13 @@ DEBUG = False
 API_DOCS_ENABLED = True
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 FRONTEND_URL = "http://frontend.test"
+BACKEND_PUBLIC_URL = "http://backend.test"
+EMAIL_PROVIDER_ENABLED = True
+DEFAULT_FROM_EMAIL = "Leeza Cakes <orders@leezacakes.test>"
+# Fixed test-only key for encrypted admin secrets.
+FIELD_ENCRYPTION_KEY = base64.urlsafe_b64encode(
+    hashlib.sha256(b"leeza-cakes-tests").digest()
+).decode()
 # Tests never write into the repository; conftest.py also isolates each test.
 PAYMENT_EVIDENCE_STORAGE_ROOT = tempfile.mkdtemp(prefix="leeza-test-evidence-")
 MEDIA_ROOT = tempfile.mkdtemp(prefix="leeza-test-media-")
