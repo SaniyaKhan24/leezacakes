@@ -43,7 +43,11 @@ export function useInbox(enabled: boolean) {
     queryClient.setQueryData(["inbox", "unread"], result);
     await queryClient.invalidateQueries({ queryKey: ["inbox", "list"] });
   };
-  return { unread: unread.data?.unread_count ?? 0, markRead };
+  return {
+    unread: unread.data?.unread_count ?? 0,
+    loaded: unread.isSuccess,
+    markRead,
+  };
 }
 
 export function NotificationBell() {
@@ -51,7 +55,7 @@ export function NotificationBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
-  const { unread, markRead } = useInbox(Boolean(user));
+  const { unread, loaded, markRead } = useInbox(Boolean(user));
   const list = useQuery({
     queryKey: ["inbox", "list", 1],
     queryFn: () => api.inbox(1, 8),
@@ -61,7 +65,8 @@ export function NotificationBell() {
   // When something new arrives while the page is open, say so once.
   const previous = useRef<number | null>(null);
   useEffect(() => {
-    if (!user) return;
+    // Only announce what arrives while the page is open, not the backlog on load.
+    if (!user || !loaded) return;
     if (previous.current !== null && unread > previous.current) {
       api
         .inbox(1, 1)
@@ -73,7 +78,7 @@ export function NotificationBell() {
         .catch(() => undefined);
     }
     previous.current = unread;
-  }, [unread, user]);
+  }, [unread, user, loaded]);
 
   useEffect(() => {
     if (!open) return;
