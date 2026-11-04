@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ArrowUpRight, Star } from "lucide-react";
 
 import { SiteHeader } from "@/components/site-header";
+import { HomeHero } from "@/components/home-hero";
 import { Reveal } from "@/components/reveal";
 import { fetchCatalog, type Product } from "@/lib/catalog";
 
@@ -19,10 +20,7 @@ export default async function Home() {
   return (
     <main>
       <SiteHeader />
-      <section className="hero shell" id="top">
-        <div className="hero-copy"><Reveal><p className="eyebrow">Small batch · made with care</p><h1>Every celebration deserves a <em>beautiful cake.</em></h1><p className="hero-intro">Handcrafted cakes for the moments that deserve something special.</p><div className="button-row"><a className="button button-dark" href="#cakes">Explore our cakes <ArrowUpRight size={16} /></a><a className="button button-line" href="#custom">Create a custom cake <ArrowUpRight size={16} /></a></div></Reveal><Reveal delay="delay-2"><div className="hero-note"><span>01</span><p>Thoughtful details.<br />Memorable flavours.</p></div></Reveal></div>
-        <Reveal className="hero-visual" delay="delay-1"><div className="image-placeholder hero-image" role="img" aria-label="Replaceable signature cake photography placeholder"><span>Signature cake<br /><small>photography placeholder</small></span></div><div className="image-caption"><span>Leeza Cakes</span><span>Made for your moment</span></div></Reveal>
-      </section>
+      <HomeHero />
       <section className="section shell" id="occasions"><Reveal className="section-heading split-heading"><div><p className="eyebrow">Find your moment</p><h2>Shop by <em>occasion.</em></h2></div><p className="section-lede">Whatever you’re celebrating, there’s a cake waiting to make it feel a little more magical.</p></Reveal><div className="occasion-grid">{occasions.map((occasion, index) => <Reveal key={occasion.title} delay={`delay-${index + 1}`}><a className={`occasion-card ${occasion.tone}`} href="#cakes"><span className="card-number">{occasion.number}</span><div><h3>{categories[index]?.name ?? occasion.title}</h3><p>{occasion.copy}</p></div><ArrowUpRight className="card-arrow" size={20} /></a></Reveal>)}</div></section>
       <section className="section shell" id="cakes"><Reveal className="section-heading split-heading"><div><p className="eyebrow">The edit</p><h2>Featured <em>cakes.</em></h2></div><a className="text-link" href="#custom">View all cakes <ArrowUpRight size={16} /></a></Reveal>{displayedProducts.length > 0 ? <div className="product-grid">{displayedProducts.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}</div> : <div className="catalog-empty"><p className="eyebrow">Coming from the kitchen</p><h3>Our first collection is being finished with care.</h3><p>Product photography and live catalogue pricing will appear here once the catalogue is seeded.</p></div>}</section>
       <section className="spotlight shell"><Reveal className="spotlight-image"><div className="image-placeholder editorial-image" role="img" aria-label="Replaceable editorial cake photography placeholder"><span>Editorial cake<br /><small>photography placeholder</small></span></div></Reveal><Reveal className="spotlight-copy" delay="delay-1"><p className="eyebrow">The Leeza signature</p><h2>Made to be <em>remembered.</em></h2><p>From the first sketch to the final flourish, every Leeza cake is made slowly, thoughtfully, and with a little room for wonder.</p><a className="text-link" href="#custom">Discover our craft <ArrowUpRight size={16} /></a></Reveal></section>

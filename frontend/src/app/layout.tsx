@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./home-hero.css";
 import { AuthProvider, CartProvider } from "@/components/providers";
 
 export const metadata: Metadata = { title: "Leeza Cakes", description: "Handcrafted celebration and custom cakes by Leeza Cakes." };
